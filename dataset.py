@@ -244,8 +244,52 @@ def load_smrt_data_one_hot(random_state):
     return train_dataset, valid_dataset, test_dataset
 
 
+class TLDataset(SMRTDatasetOneHot):
+    def __init__(self, name, raw_dir=None):
+        super(TLDataset, self).__init__(name=name, raw_dir=raw_dir)
+
+    def process(self):
+        filename = self.name + ".csv"
+        self.graphs, self.label = self._load_graph(filename)
+
+    def _load_graph(self, filename):
+        self.dataset = pd.read_csv(os.path.join(self.raw_dir, filename))
+        data = self.dataset
+        x_smiles = data["smiles"]
+        g_labels = data["RT"]
+        g_labels = torch.tensor(g_labels, dtype=torch.float32)
+        graph_list = []
+        for i in tqdm(range(len(x_smiles))):
+            g = feature_to_dgl_graph(smiles2graph(x_smiles[i]))
+            # nx_plot(g)
+            graph_list.append(g)
+            if i % 1000 == 0:
+                print(i)
+        return graph_list, g_labels
+
+    def save(self):
+        """save the graph list and the labels"""
+        graph_path = os.path.join(self.save_path, 'dgl_graph.bin')
+        save_graphs(str(graph_path), self.graphs, {'labels': self.label})
+        print(f"data saved in: {graph_path}")
+
+    def has_cache(self):
+        graph_path = os.path.join(self.save_path, 'dgl_graph.bin')
+        return os.path.exists(graph_path)
+
+    def load(self):
+        print(f"loading data from: {os.path.join(self.save_path, 'dgl_graph.bin')}")
+        graphs, label_dict = load_graphs(os.path.join(self.save_path, 'dgl_graph.bin'))
+        self.graphs = graphs
+        self.label = label_dict['labels']
+
+
 if __name__ == "__main__":
     #test
+    os.chdir("D:\yue\chem_dataset\DEEPGNN_RT\\test_data")
+    test_tl = TLDataset(name="Eawag_XBridgeC18_364_trans_with_smiles", raw_dir="D:\yue\chem_dataset\DEEPGNN_RT\\test_data")
+    a = test_tl[0]
+
     test_dataset = SMRTDatasetOneHot(name= "SMRT_test")
     train_dataset = SMRTDatasetOneHot(name= "SMRT_train_demo")
     print(len(train_dataset), len(test_dataset))
