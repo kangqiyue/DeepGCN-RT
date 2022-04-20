@@ -240,7 +240,7 @@ if __name__ == '__main__':
 
     # GNN model args
     parser.add_argument('--num_layers', type=int, default=5, help='Number of GNN layers.')
-    parser.add_argument('--mlp_layers', type=int, default=2, help='Number of MLP layers in DEEPGNN.')
+    parser.add_argument('--mlp_layers', type=int, default=1, help='Number of MLP layers in DEEPGNN.')
     parser.add_argument('--hid_dim', type=int, default=200, help='Hidden channel size.')
 
     # training args

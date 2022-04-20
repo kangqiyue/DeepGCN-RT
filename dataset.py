@@ -256,7 +256,7 @@ class TLDataset(SMRTDatasetOneHot):
         self.dataset = pd.read_csv(os.path.join(self.raw_dir, filename))
         data = self.dataset
         x_smiles = data["smiles"]
-        g_labels = data["RT"]
+        g_labels = data["rt"]
         g_labels = torch.tensor(g_labels, dtype=torch.float32)
         graph_list = []
         for i in tqdm(range(len(x_smiles))):
@@ -288,7 +288,7 @@ if __name__ == "__main__":
     #test
     os.chdir("D:\yue\chem_dataset\DEEPGNN_RT\\test_data")
     test_tl = TLDataset(name="Eawag_XBridgeC18_364_trans_with_smiles", raw_dir="D:\yue\chem_dataset\DEEPGNN_RT\\test_data")
-    a = test_tl[0]
+    t = test_tl[0]
 
     test_dataset = SMRTDatasetOneHot(name= "SMRT_test")
     train_dataset = SMRTDatasetOneHot(name= "SMRT_train_demo")

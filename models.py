@@ -8,8 +8,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ogb.graphproppred.mol_encoder import AtomEncoder, BondEncoder
-
 from dgllife.model.gnn.gat import  GATLayer
 from dgllife.model.gnn.gcn import GCNLayer
 
