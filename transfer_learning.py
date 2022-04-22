@@ -103,7 +103,7 @@ def main():
 
     '''dataset'''
     from dataset import TLDataset
-    dataset = TLDataset(name="Eawag_XBridgeC18_364_trans_with_smiles", raw_dir="D:\DEEPGNN_RT\\test_data") #D:\Molecule\DEEPGNN_RT\test_data
+    dataset = TLDataset(name="Cao_HILIC_116", raw_dir= "D:\yue\chem_dataset\DEEPGNN_RT\dataset\\10_subdataset") #D:\Molecule\DEEPGNN_RT\test_data
     '''init model'''
     model = DeeperGCN(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hid_dim=200,num_layers=num_layers, dropout=dropout, mlp_layers=args.mlp_layers)
 
@@ -152,7 +152,8 @@ def main():
         y_labels = next(iter(test_dataloader))[1]
         pred_summary = return_prediction(model, device, file_savepath, loss_fn, loss_MAE, fold, test_dataloader, y_labels)
 
-        info = {"fold_num": fold,
+        info = {"seed": args.seed,
+                "fold_num": fold,
                 # "num of compound": num_com,
                 # "rt_range": rt_range,
                 # "len_train": len(x_train),
@@ -162,7 +163,7 @@ def main():
         mae_result = {**info, **pred_summary}
         mae_result = pd.DataFrame(mae_result, index=[0])
         result.append(mae_result)
-    print(result)
+    result = pd.DataFrame()
 
 
 def train_with_es(model, device, train_dataloader, test_dataloader, lr, loss_fn, loss_MAE, epochs=200, early_stop=30,):
@@ -287,7 +288,7 @@ if __name__ == '__main__':
     parser.add_argument('--hid_dim', type=int, default=200, help='Hidden channel size.')
 
     # training args
-    parser.add_argument('--epochs', type=int, default=200, help='Number of epochs to train.')
+    parser.add_argument('--epochs', type=int, default=2, help='Number of epochs to train.')
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
     parser.add_argument('--dropout', type=float, default=0, help='Dropout rate.')
     parser.add_argument('--batch_size', type=int, default=8, help='Batch size.')
