@@ -667,7 +667,6 @@ if __name__ == "__main__":
     # print(out)
 
 
-
     # #gat test
     # model = GATModel(164)
     # print(model)
