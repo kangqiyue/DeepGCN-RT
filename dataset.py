@@ -303,33 +303,7 @@ if __name__ == "__main__":
 
     print("transfer to graph finished!")
 
-    #prepare data!!
-    import re
-    path = "D:\yue\chem_dataset\DEEPGNN_RT\dataset\\10_subdataset"
-    os.chdir(path)
-    files = os.listdir()
-    files
-    files = [i for i in files if i.endswith("xlsx")]
-    print(f"len of files: {len(files)}\n"
-          f"{files}")
-    from rdkit import Chem
 
-    def inchi_to_smiles(inchi):
-        try:
-            smile = Chem.MolToSmiles(Chem.MolFromInchi(inchi))
-            return smile
-        except:
-            print("error:")
-            print(inchi)
-            return "transfer failed"
-
-    for f in files:
-        print(f"procssing {f}")
-        data = pd.read_excel(f)
-        data["rt"] = data["RT"] * 60
-        # using apply function to create a new column
-        data['smiles'] = data.apply(lambda row:inchi_to_smiles(row.InChI), axis=1)
-        data.to_excel(os.path.join(path, "processed", f), index=False)
 
 
 
