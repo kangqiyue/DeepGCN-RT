@@ -631,10 +631,10 @@ if __name__ == "__main__":
               f"freeze params: {count_no_trainable_parameters(model)}\n")
 
 
-    from dataset import SMRTDatasetOneHot
-    test_dataset = SMRTDatasetOneHot(name= "SMRT_test_demo", raw_dir="D:\Molecule\DEEPGNN_RT\dataset")
-    test_dataloader = GraphDataLoader(test_dataset, batch_size=6)
-    g = test_dataset[0][0]
+    # from dataset import SMRTDatasetOneHot
+    # test_dataset = SMRTDatasetOneHot(name= "SMRT_test_demo", raw_dir="D:\Molecule\DEEPGNN_RT\dataset")
+    # test_dataloader = GraphDataLoader(test_dataset, batch_size=6)
+    # g = test_dataset[0][0]
 
 
 
@@ -677,12 +677,12 @@ if __name__ == "__main__":
     #
 
 
-    #gcn test
-    model = GCNModel(164)
-    print(model)
-    print_param(model)
-    out = model(g)
-    print(out)
+    # #gcn test
+    # model = GCNModel(164)
+    # print(model)
+    # print_param(model)
+    # out = model(g)
+    # print(out)
 
 
 
