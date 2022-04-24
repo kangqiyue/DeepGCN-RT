@@ -18,7 +18,6 @@ from models import GATModel, GCNModel, GINModel, AttentivfFPModel, DeeperGCN
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-
 def seed_torch(seed=1):
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
@@ -31,7 +30,6 @@ def seed_torch(seed=1):
     torch.backends.cudnn.enabled = False
 
 
-# def train function
 def train(model, device, dataloader, optimizer, loss_fn, loss_fn_MAE,):
     num_batches = len(dataloader)
     train_loss = 0
@@ -42,7 +40,6 @@ def train(model, device, dataloader, optimizer, loss_fn, loss_fn_MAE,):
         bg = bg.to(device)
         labels = labels.reshape(-1, 1)
         labels = labels.to(device)
-        # batched_graph = batched_graph.to(device)
         pred = model(bg)
         loss = loss_fn(pred, labels)
         # runing loss in each batch
@@ -65,18 +62,14 @@ def test(model,device, dataloader, loss_fn, loss_fn_MAE):
     model.eval()
     with torch.no_grad():
         for step, (bg, labels) in enumerate(dataloader):
-            # node_feats = [n.to(device) for n in node_feats]
-            # edge_feats = [e.to(device) for e in edge_feats]
             bg = bg.to(device)
             labels= labels.reshape(-1,1)
             labels = labels.to(device)
-            # batched_graph = batched_graph.to(device)
             pred = model(bg)
             test_loss += loss_fn(pred, labels).item()
             test_loss_MAE += loss_fn_MAE(pred, labels).item()
     test_loss /= num_batches
     test_loss_MAE /= num_batches
-    # print(f"loss: {test_loss:>8f}; Loss MAE: {test_loss_MAE:>8f}")
     return test_loss, test_loss_MAE
 
 
@@ -85,15 +78,7 @@ def main():
 
     #set seed
     seed_torch(seed=args.seed)
-    #wandb login
-    with open("wandb_login/wandb.env") as f:
-        for line in f:
-            key, val = line.strip().split("=", 1)
-            os.environ[key] = val
-    wandb.init(project="deepGNN_22_4_13", entity="qwertyer")
     args.name = f"{args.model_name}_{args.num_layers}_lr_{args.lr}_seed_{args.seed}"
-    wandb.run.name = args.name
-    wandb.config.update(args)  # adds all of the arguments as config variables
     print(args)
 
     #train args
@@ -133,24 +118,10 @@ def main():
         full_bond_feature_dims = get_edge_dim()
         model = GINModel(num_node_emb=full_atom_feature_dims, num_edge_emb=full_bond_feature_dims, num_layers=num_layers, emb_dim=200, dropout=dropout)
 
-    elif model_name == "AFP":
-        model = AttentivfFPModel(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(),
-                                 num_layers=num_layers, graph_feat_size=200, dropout=dropout)
-
     elif model_name == "DEEPGNN":
         model = DeeperGCN(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hid_dim=200,num_layers=num_layers, dropout=dropout, mlp_layers=args.mlp_layers)
-    elif model_name == "DEEPGNN_mlp1":
-        model = DeeperGCN(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hid_dim=200,num_layers=num_layers, dropout=dropout, mlp_layers=args.mlp_layers)
-    elif model_name == "AFP_layer_norm":
-        from model_KAFP_GNN import AttentiveFPGNNLN, KAFPGNN
-        model = AttentiveFPGNNLN(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), num_layers=num_layers, dropout=dropout)
-    elif model_name == "KAFP":
-        from model_KAFP_GNN import AttentiveFPGNNLN, KAFPGNN
-        model = KAFPGNN(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), num_layers=num_layers, dropout=dropout, out_dim=40)
 
-    model
     model.to(device)
-
 
     print('----args----')
     print('\n'.join([f'{k}: {v}' for k, v in vars(args).items()]))
@@ -165,12 +136,11 @@ def main():
     #log_file
     best_loss = float("inf")
     best_model = copy.deepcopy(model)
-    times = []
-    log_file = []
+    times, log_file = [], []
 
     print('---------- Training ----------')
     #optim
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    optimizer = optim.Adam(model.parameters(), lr=lr)
     scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=200, verbose=True)
     # training & validation & testing
     for i in range(args.epochs):
@@ -185,15 +155,6 @@ def main():
         print(f'Epoch {i} |lr: {optimizer.param_groups[0]["lr"]:.6f} | Train: {train_loss:.4f} | Valid: {valid_loss:.4f} | Test: {test_loss:.4f} | '
               f'Valid_MAE: {valid_MAE:.4f} | Test_MAE: {test_MAE:.4f} |'
               f'time/epoch: {sum(times) / len(times):.1f}')
-        #wandb log
-        wandb.log({
-            "lr":optimizer.param_groups[0]["lr"],
-            "train_loss": train_loss,
-            "valid_loss": valid_loss,
-            "test_loss": test_loss,
-            "valid_MAE": valid_MAE,
-            "test_MAE": test_MAE
-        })
 
         #local file log
         log_file_loop = [i, optimizer.param_groups[0]["lr"], train_loss, valid_loss, test_loss, valid_MAE, test_MAE]
@@ -221,11 +182,7 @@ def main():
         f.write(str(vars(args)))
     index = result.iloc[:,3].idxmin(axis =0)
     print("the index of min loss is shown as follows:",result.iloc[index, :])
-
-    # torch.save(best_model.state_dict(), '\parameter.pkl')
     torch.save(best_model.state_dict(), file_savepath + "/best_model_weight.pth")
-    #wandb save
-    # wandb.save("my_model.h5")
 
 
 if __name__ == '__main__':
