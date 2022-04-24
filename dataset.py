@@ -295,8 +295,6 @@ if __name__ == "__main__":
                  'LIFE_old_194',
                  'MTBLS87_147',
                  'UniToyama_Atlantis_143']
-    #test
-    # os.chdir("D:\yue\chem_dataset\DEEPGNN_RT\\test_data")
     for t in tl_list:
         test_tl = TLDataset(name=t)
         print(len(test_tl))
