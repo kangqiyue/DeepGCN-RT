@@ -10,10 +10,11 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 from dgl.dataloading import GraphDataLoader
+from dgl.nn import SumPooling
 
 from dataset import  load_smrt_data_one_hot, get_node_dim, get_edge_dim
 from dataset import get_node_dim, get_edge_dim
-from models import GATModel, GCNModel, GINModel, AttentivfFPModel, DeeperGCN
+from models import GATModel, GCNModel, GINModel, AttentivfFPModel, DeeperGCN, GCNModelAFPreadout
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -94,7 +95,7 @@ def main():
     # check cuda
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     #save path
-    file_savepath =f"./output/GNN_4_16_{args.model_name}_layer_{args.num_layers}_lr_{args.lr}_seed_{args.seed}"
+    file_savepath =f"./output/GNN_ablation_{args.model_name}_layer_{args.num_layers}_lr_{args.lr}_seed_{args.seed}"
     if not os.path.isdir(file_savepath):
         os.makedirs(file_savepath)
     print(file_savepath)
@@ -120,6 +121,18 @@ def main():
 
     elif model_name == "DEEPGNN":
         model = DeeperGCN(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hid_dim=200,num_layers=num_layers, dropout=dropout, mlp_layers=args.mlp_layers)
+
+    elif model_name == "DEEPGNN_ablation_sum_readout":
+        model = DeeperGCN(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hid_dim=200,num_layers=num_layers, dropout=dropout, mlp_layers=args.mlp_layers)
+        model.readout = SumPooling()
+
+    elif model_name == "DEEPGNN_ablation_one_linear_layer":
+        model = DeeperGCN(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hid_dim=200,num_layers=num_layers, dropout=dropout, mlp_layers=args.mlp_layers)
+        model.out = nn.Linear(200, 1)
+
+    elif model_name == "DEEPGNN_ablation_norm_gcn":
+        model = GCNModelAFPreadout(node_in_dim=get_node_dim(), hidden_feats = [200]*num_layers)
+
 
     model.to(device)
 
@@ -196,7 +209,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_name', type=str, default='DEEPGNN', help='Name of model, choose from: GAT, GCN, GIN, AFP, DEEPGNN')
 
     # GNN model args
-    parser.add_argument('--num_layers', type=int, default=5, help='Number of GNN layers.')
+    parser.add_argument('--num_layers', type=int, default=16, help='Number of GNN layers.')
     parser.add_argument('--mlp_layers', type=int, default=1, help='Number of MLP layers in DEEPGNN.')
     parser.add_argument('--hid_dim', type=int, default=200, help='Hidden channel size.')
 
