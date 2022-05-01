@@ -1,0 +1,12 @@
+/others/
+/output/
+/test_data/
+/wandb_login/
+/dataset/10_subdataset/all data/
+/dataset/10_subdataset/processed/
+/dataset/SMRT_test/
+/dataset/SMRT_train/
+/dataset/SMRT_test_demo_set.txt
+/dataset/SMRT_test_set.csv
+/dataset/SMRT_train_demo_set.txt
+/dataset/SMRT_train_set.csv
