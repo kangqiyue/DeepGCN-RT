@@ -10,3 +10,15 @@
 /dataset/SMRT_test_set.csv
 /dataset/SMRT_train_demo_set.txt
 /dataset/SMRT_train_set.csv
+/train.sh
+/train_afp.sh
+/train_backup.py
+/train_bn_2.sh
+/train_bn_readout_3.sh
+/train_gat.sh
+/train_gcn.sh
+/train_gin.sh
+/train_Kafp.sh
+/train_mlp_1.sh
+/train_mlp_1_24_32.sh
+/数据处理和画图.py
