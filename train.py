@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 from dgl.dataloading import GraphDataLoader
-from dgl.nn import SumPooling
+from dgl.nn import SumPooling,AvgPooling
 
 from dataset import  load_smrt_data_one_hot, get_node_dim, get_edge_dim
 from dataset import get_node_dim, get_edge_dim
@@ -126,11 +126,15 @@ def main():
         model = DeeperGCN(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hid_dim=200,num_layers=num_layers, dropout=dropout, mlp_layers=args.mlp_layers)
         model.readout = SumPooling()
 
+    elif model_name == "DEEPGNN_ablation_mean_readout":
+        model = DeeperGCN(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hid_dim=200,num_layers=num_layers, dropout=dropout, mlp_layers=args.mlp_layers)
+        model.readout = AvgPooling()
+
     elif model_name == "DEEPGNN_ablation_one_linear_layer":
         model = DeeperGCN(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hid_dim=200,num_layers=num_layers, dropout=dropout, mlp_layers=args.mlp_layers)
         model.out = nn.Linear(200, 1)
 
-    elif model_name == "DEEPGNN_ablation_norm_gcn":
+    elif model_name == "DEEPGNN_ablation_plain_gcn":
         model = GCNModelAFPreadout(node_in_dim=get_node_dim(), hidden_feats = [200]*num_layers)
 
 
