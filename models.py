@@ -10,6 +10,8 @@ import torch.nn.functional as F
 
 from dgllife.model.gnn.gat import  GATLayer
 from dgllife.model.gnn.gcn import GCNLayer
+from dgllife.model.gnn.attentivefp import AttentiveFPGNN
+from dgllife.model.readout.attentivefp_readout import AttentiveFPReadout
 
 
 class GINLayerModified(nn.Module):
@@ -54,27 +56,27 @@ class GINLayerModified(nn.Module):
         return node_feats
 
 
-class EmbeddingLayer(nn.Module):
-    def __init__(self, node_emb_dim, edge_emb_dim=None):
-        super(EmbeddingLayer, self).__init__()
-        self.node_emb_dim= node_emb_dim
-        self.edge_emb_dim=edge_emb_dim
-
-        self.atom_encoder = AtomEncoder(node_emb_dim)
-        self.float_node_embeddings = nn.Linear(6, node_emb_dim, bias=False)
-        if edge_emb_dim is not None:
-            self.bond_encoder = BondEncoder(edge_emb_dim)
-
-    def forward(self, g):
-        node_feats, edge_feats, node_float_feats = g.ndata["node_feat"], g.edata["edge_feat"], g.ndata["node_float_feat"]
-        node_feats = self.atom_encoder(node_feats)
-        node_feats += self.float_node_embeddings(node_float_feats)
-
-        if self.edge_emb_dim is None:
-            return node_feats
-        else:
-            edge_feats = self.bond_encoder(edge_feats)
-            return  node_feats, edge_feats
+# class EmbeddingLayer(nn.Module):
+#     def __init__(self, node_emb_dim, edge_emb_dim=None):
+#         super(EmbeddingLayer, self).__init__()
+#         self.node_emb_dim= node_emb_dim
+#         self.edge_emb_dim=edge_emb_dim
+#
+#         self.atom_encoder = AtomEncoder(node_emb_dim)
+#         self.float_node_embeddings = nn.Linear(6, node_emb_dim, bias=False)
+#         if edge_emb_dim is not None:
+#             self.bond_encoder = BondEncoder(edge_emb_dim)
+#
+#     def forward(self, g):
+#         node_feats, edge_feats, node_float_feats = g.ndata["node_feat"], g.edata["edge_feat"], g.ndata["node_float_feat"]
+#         node_feats = self.atom_encoder(node_feats)
+#         node_feats += self.float_node_embeddings(node_float_feats)
+#
+#         if self.edge_emb_dim is None:
+#             return node_feats
+#         else:
+#             edge_feats = self.bond_encoder(edge_feats)
+#             return  node_feats, edge_feats
 
 
 class EmbeddingLayerConcat(nn.Module):
@@ -350,6 +352,123 @@ class GCNModel(nn.Module):
         return feats
 
 
+'''GCN model with attention and GRU readout'''
+# Code was adapted and modified from DGL-LifeSci, url: https://lifesci.dgl.ai/api/model.gnn.html
+class GCNModelAFPreadout(nn.Module):
+    r"""GCN from `Semi-Supervised Classification with Graph Convolutional Networks
+    <https://arxiv.org/abs/1609.02907>`__
+
+    Parameters
+    ----------
+    in_feats : int
+        Number of input node features.
+    hidden_feats : list of int
+        ``hidden_feats[i]`` gives the size of node representations after the i-th GCN layer.
+        ``len(hidden_feats)`` equals the number of GCN layers.  By default, we use
+        ``[64, 64]``.
+    gnn_norm : list of str
+        ``gnn_norm[i]`` gives the message passing normalizer for the i-th GCN layer, which
+        can be `'right'`, `'both'` or `'none'`. The `'right'` normalizer divides the aggregated
+        messages by each node's in-degree. The `'both'` normalizer corresponds to the symmetric
+        adjacency normalization in the original GCN paper. The `'none'` normalizer simply sums
+        the messages. ``len(gnn_norm)`` equals the number of GCN layers. By default, we use
+        ``['none', 'none']``.
+    activation : list of activation functions or None
+        If not None, ``activation[i]`` gives the activation function to be used for
+        the i-th GCN layer. ``len(activation)`` equals the number of GCN layers.
+        By default, ReLU is applied for all GCN layers.
+    residual : list of bool
+        ``residual[i]`` decides if residual connection is to be used for the i-th GCN layer.
+        ``len(residual)`` equals the number of GCN layers. By default, residual connection
+        is performed for each GCN layer.
+    batchnorm : list of bool
+        ``batchnorm[i]`` decides if batch normalization is to be applied on the output of
+        the i-th GCN layer. ``len(batchnorm)`` equals the number of GCN layers. By default,
+        batch normalization is applied for all GCN layers.
+    dropout : list of float
+        ``dropout[i]`` decides the dropout probability on the output of the i-th GCN layer.
+        ``len(dropout)`` equals the number of GCN layers. By default, no dropout is
+        performed for all layers.
+    """
+
+    def __init__(self, node_in_dim, hidden_feats=None, gnn_norm=None, activation=None,
+                 residual=None, batchnorm=None, dropout=None):
+        super(GCNModelAFPreadout, self).__init__()
+
+        if hidden_feats is None:
+            hidden_feats = [200, 200, 200,200,200]
+        self.embed_layer = EmbeddingLayerConcat(node_in_dim, hidden_feats[0])
+
+        in_feats = hidden_feats[0]
+
+        n_layers = len(hidden_feats)
+        if gnn_norm is None:
+            gnn_norm = ['none' for _ in range(n_layers)]
+        if activation is None:
+            activation = [F.relu for _ in range(n_layers)]
+        if residual is None:
+            residual = [True for _ in range(n_layers)]
+        if batchnorm is None:
+            batchnorm = [True for _ in range(n_layers)]
+        if dropout is None:
+            dropout = [0.1 for _ in range(n_layers)]
+        lengths = [len(hidden_feats), len(gnn_norm), len(activation),
+                   len(residual), len(batchnorm), len(dropout)]
+        assert len(set(lengths)) == 1, 'Expect the lengths of hidden_feats, gnn_norm, ' \
+                                       'activation, residual, batchnorm and dropout to ' \
+                                       'be the same, got {}'.format(lengths)
+
+        self.hidden_feats = hidden_feats
+        self.gnn_layers = nn.ModuleList()
+        for i in range(n_layers):
+            self.gnn_layers.append(GCNLayer(in_feats, hidden_feats[i], gnn_norm[i], activation[i],
+                                            residual[i], batchnorm[i], dropout[i]))
+            in_feats = hidden_feats[i]
+
+        self.readout = AttentiveFPReadout(
+            hidden_feats[-1], num_timesteps=2, dropout=dropout[-1]
+        )
+
+        # mlp layers
+        self.out = nn.Sequential(
+            nn.Linear(hidden_feats[-1], 1024),
+            nn.ReLU(),
+            nn.Linear(1024, 1)
+        )
+
+    def reset_parameters(self):
+        """Reinitialize model parameters."""
+        for gnn in self.gnn_layers:
+            gnn.reset_parameters()
+
+    def forward(self, g):
+        """Update node representations.
+
+        Parameters
+        ----------
+        g : DGLGraph
+            DGLGraph for a batch of graphs
+        feats : FloatTensor of shape (N, M1)
+            * N is the total number of nodes in the batch of graphs
+            * M1 is the input node feature size, which equals in_feats in initialization
+
+        Returns
+        -------
+        feats : FloatTensor of shape (N, M2)
+            * N is the total number of nodes in the batch of graphs
+            * M2 is the output node representation size, which equals
+              hidden_sizes[-1] in initialization.
+        """
+        feats = self.embed_layer(g)
+        for gnn in self.gnn_layers:
+            feats = gnn(g, feats)
+        # g.ndata['feats'] = feats
+        # feats = dgl.sum_nodes(g, "feats")
+        # feats = self.out(feats)
+        out = self.readout(g, feats)
+        out = self.out(out)
+        return out
+
 '''GIN model'''
 # from dgllife.model.gnn.gin import GIN
 class GINModel(nn.Module):
@@ -472,7 +591,6 @@ class GINModel(nn.Module):
             return ValueError("Expect self.JK to be 'concat', 'last', "
                               "'max' or 'sum', got {}".format(self.JK))
 
-
         g.ndata['feats'] = final_node_feats
         feats = dgl.sum_nodes(g, "feats")
         feats = self.out(feats)
@@ -480,9 +598,6 @@ class GINModel(nn.Module):
 
 
 '''AttentiveFP model'''
-from dgllife.model.gnn.attentivefp import AttentiveFPGNN
-from dgllife.model.readout.attentivefp_readout import AttentiveFPReadout
-
 class AttentivfFPModel(nn.Module):
     def __init__(self,
                  node_in_dim,
@@ -631,10 +746,10 @@ if __name__ == "__main__":
               f"freeze params: {count_no_trainable_parameters(model)}\n")
 
 
-    # from dataset import SMRTDatasetOneHot
-    # test_dataset = SMRTDatasetOneHot(name= "SMRT_test_demo", raw_dir="D:\Molecule\DEEPGNN_RT\dataset")
-    # test_dataloader = GraphDataLoader(test_dataset, batch_size=6)
-    # g = test_dataset[0][0]
+    from dataset import SMRTDatasetOneHot
+    test_dataset = SMRTDatasetOneHot(name= "SMRT_test_demo", raw_dir="D:\DEEPGNN_RT\dataset")
+    test_dataloader = GraphDataLoader(test_dataset, batch_size=6)
+    g = test_dataset[0][0]
 
 
 
@@ -643,10 +758,9 @@ if __name__ == "__main__":
     # print(model)
     # out = model(g)
     # print(out)
-    #
-    #
-    #
-    #
+
+
+
     #afp model test
     # model = AttentivfFPModel(164, 11, 200, 200, 5, 200, 0.1)
     # print(model)
@@ -667,19 +781,43 @@ if __name__ == "__main__":
     # print(out)
 
 
+
     # #gat test
     # model = GATModel(164)
     # print(model)
     # print_param(model)
     # out = model(g)
     # print(out)
-    #
+
 
 
     # #gcn test
     # model = GCNModel(164)
     # print(model)
     # print_param(model)
+    # out = model(g)
+    # print(out)
+
+
+
+    # '''ablation model'''
+    # model = GCNModelAFPreadout(node_in_dim=164, hidden_feats=[200] * 16)
+    # print(model)
+    # out = model(g)
+    # print(out)
+    #
+    #
+    # model = DeeperGCN(node_in_dim=164, edge_in_dim=11, hid_dim=200, num_layers=16, dropout=0.1, mlp_layers=1)
+    # from dgl.nn import SumPooling
+    # model.readout = SumPooling()
+    # print(model)
+    # out = model(g)
+    # print(out)
+    #
+    #
+    # model = DeeperGCN(node_in_dim=164, edge_in_dim=11, hid_dim=200, num_layers=16, dropout=0.1, mlp_layers=1)
+    # model.out = nn.Linear(200, 1)
+    # print(model)
     # out = model(g)
     # print(out)
 
