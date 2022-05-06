@@ -115,7 +115,7 @@ def main():
     '''k fold validation'''
     result = []
     # Define the K-fold Cross Validator
-    kfold =  KFold(n_splits=10, shuffle=True, random_state=0)
+    kfold =  KFold(n_splits=10, shuffle=True, random_state=args.seed)
     print('--------------------------------')
 
     # K-fold Cross Validation model evaluation
