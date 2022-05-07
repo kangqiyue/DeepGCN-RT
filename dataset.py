@@ -231,12 +231,18 @@ class SMRTDatasetOneHot(DGLDataset):
         return len(self.graphs)
 
 
-def load_smrt_data_one_hot(random_state):
-    train_dataset = SMRTDatasetOneHot(name="SMRT_train")
-    train_dataset, valid_dataset = dgl.data.utils.split_dataset(train_dataset, [0.9, 0.1], shuffle=True, random_state=random_state)
-    test_dataset = SMRTDatasetOneHot(name="SMRT_test")
+def load_smrt_data_one_hot(random_state, demo = False, raw_dir = "/data/users/kangqiyue/kqy/DEEPGNN_RT/dataset"):
+    if demo:
+        train_dataset = SMRTDatasetOneHot(name="SMRT_train_demo", raw_dir=raw_dir)
+        train_dataset, valid_dataset = dgl.data.utils.split_dataset(train_dataset, [0.9, 0.1], shuffle=True,random_state=random_state)
+        test_dataset = SMRTDatasetOneHot(name="SMRT_test_demo", raw_dir=raw_dir)
+    else:
+        train_dataset = SMRTDatasetOneHot(name="SMRT_train", raw_dir = raw_dir)
+        train_dataset, valid_dataset = dgl.data.utils.split_dataset(train_dataset, [0.9, 0.1], shuffle=True, random_state=random_state)
+        test_dataset = SMRTDatasetOneHot(name="SMRT_test", raw_dir = raw_dir)
 
     print(f"----len----\n"
+          f"demo is {demo}\n"
           f"len of train_dataset: {len(train_dataset)}\n"
           f"len of valid_dataset: {len(valid_dataset)}\n"
           f"len of test_dataset: {len(test_dataset)}\n"

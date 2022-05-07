@@ -291,16 +291,16 @@ def return_prediction(model, best_model_stat, device, file_savepath, loss_fn, lo
     model.load_state_dict(best_model_stat)
 
     model.to(device)
-    _, _, pred, y = test(model, device, dataloader, loss_fn, loss_MAE, return_pred=True)
+    _, _, y, pred = test(model, device, dataloader, loss_fn, loss_MAE, return_pred=True)
     y = y.reshape(-1, 1).cpu()
     pred = pred.reshape(-1, 1).cpu()
     print(f"y_test's shape: {y.shape}; pred's shape: {pred.shape}")
 
     # save pred dataset
-    r2 = torch.cat([y, pred], dim=1)
-    r2 = pd.DataFrame(r2.cpu().numpy())
-    r2.columns = ["y_label", "pred"]
-    r2.to_csv(os.path.join(file_savepath ,f"fold_{fold}_pred_data.csv"))
+    result = torch.cat([y, pred], dim=1)
+    result = pd.DataFrame(result.cpu().numpy())
+    result.columns = ["y_label", "pred"]
+    result.to_csv(os.path.join(file_savepath ,f"fold_{fold}_pred_data.csv"))
 
     from sklearn.metrics import median_absolute_error, r2_score, mean_absolute_error, mean_squared_error, mean_absolute_percentage_error
     rt_summary = {

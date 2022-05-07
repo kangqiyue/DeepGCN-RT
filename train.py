@@ -55,10 +55,31 @@ def train(model, device, dataloader, optimizer, loss_fn, loss_fn_MAE,):
     return train_loss / num_batches
 
 
-def test(model,device, dataloader, loss_fn, loss_fn_MAE):
+# def test(model,device, dataloader, loss_fn, loss_fn_MAE):
+#     num_batches = len(dataloader)
+#     test_loss = 0
+#     test_loss_MAE = 0
+#
+#     model.eval()
+#     with torch.no_grad():
+#         for step, (bg, labels) in enumerate(dataloader):
+#             bg = bg.to(device)
+#             labels= labels.reshape(-1,1)
+#             labels = labels.to(device)
+#             pred = model(bg)
+#             test_loss += loss_fn(pred, labels).item()
+#             test_loss_MAE += loss_fn_MAE(pred, labels).item()
+#     test_loss /= num_batches
+#     test_loss_MAE /= num_batches
+#     return test_loss, test_loss_MAE
+
+
+def test(model,device, dataloader, loss_fn, loss_fn_MAE, return_pred=False):
     num_batches = len(dataloader)
     test_loss = 0
     test_loss_MAE = 0
+    preds = []
+    labels_all = []
 
     model.eval()
     with torch.no_grad():
@@ -67,11 +88,15 @@ def test(model,device, dataloader, loss_fn, loss_fn_MAE):
             labels= labels.reshape(-1,1)
             labels = labels.to(device)
             pred = model(bg)
+
+            preds.append(pred)
+            labels_all.append(labels)
             test_loss += loss_fn(pred, labels).item()
             test_loss_MAE += loss_fn_MAE(pred, labels).item()
+
     test_loss /= num_batches
     test_loss_MAE /= num_batches
-    return test_loss, test_loss_MAE
+    return (test_loss, test_loss_MAE, labels_all, preds) if return_pred else (test_loss, test_loss_MAE)
 
 
 def main():
@@ -103,6 +128,7 @@ def main():
 
     '''dataset and data_loader'''
     train_dataset, valid_dataset, test_dataset = load_smrt_data_one_hot(random_state=args.seed)
+    # train_dataset, valid_dataset, test_dataset = load_smrt_data_one_hot(random_state=args.seed, demo=True, raw_dir="D:\DEEPGNN_RT\dataset")
     train_dataloader = GraphDataLoader(train_dataset, batch_size=batch_size, drop_last=False, shuffle=True)
     valid_dataloader = GraphDataLoader(valid_dataset, batch_size=len(valid_dataset))
     test_dataloader = GraphDataLoader(test_dataset, batch_size=len(test_dataset))
@@ -138,8 +164,55 @@ def main():
         model = GCNModelAFPreadout(node_in_dim=get_node_dim(), hidden_feats = [200]*num_layers)
 
 
-    model.to(device)
+    '''inference'''
+    inference = False
+    if inference:
+        import pandas as pd
+        '''save folder'''
+        file_savepath = 'output/SMRT_result'
+        if not os.path.isdir(file_savepath):
+            os.makedirs(file_savepath)
+        print(file_savepath)
 
+        '''load best model params'''
+        best_model_path = "/data/users/kangqiyue/kqy/DEEPGNN_RT/output/GNN_DEEPGNN_mlp1_layer_16_lr_0.001_seed_1/best_model_weight.pth"
+        # best_model_path = "D:\DEEPGNN_RT\output\GNN_DEEPGNN_mlp1_layer_16_lr_0.001_seed_1\\best_model_weight.pth"
+        checkpoint = torch.load(best_model_path, map_location=device)  # 加载断点
+        model.load_state_dict(checkpoint)  # 加载模型可学习参数
+        print(f"model loaded from: {best_model_path}")
+        model.to(device)
+        _, _, y, pred = test(model, device, train_dataloader, loss_fn, loss_MAE, return_pred=True)
+        #convert list to tensor
+        y = torch.cat(y)
+        pred = torch.cat(pred)
+
+        y = y.reshape(-1, 1).cpu()
+        pred = pred.reshape(-1, 1).cpu()
+        print(f"y_test's shape: {y.shape}; pred's shape: {pred.shape}")
+
+        # save pred dataset
+        result = torch.cat([y, pred], dim=1)
+        result = pd.DataFrame(result.cpu().numpy())
+        result.columns = ["y_label", "pred"]
+        result.to_csv(os.path.join(file_savepath, f"SMRT_train_prediction_result.csv"))
+
+        from sklearn.metrics import median_absolute_error, r2_score, mean_absolute_error, mean_squared_error, \
+            mean_absolute_percentage_error
+        rt_summary = {
+            "mean_absolute_error": mean_absolute_error(y, pred),
+            "median_absolute_error": median_absolute_error(y, pred),
+            "mean_absolute_percentage_error": mean_absolute_percentage_error(y, pred),
+            "r2_score": r2_score(y, pred),
+            "mean_squared_error": mean_squared_error(y, pred)
+        }
+        print(rt_summary)
+        # rt_summary = pd.DataFrame(rt_summary)
+        # result.to_csv(os.path.join(file_savepath, f"SMRT_train_prediction_summary.csv"))
+        print("inference process finished !!! ")
+        return
+
+
+    model.to(device)
     print('----args----')
     print('\n'.join([f'{k}: {v}' for k, v in vars(args).items()]))
     print('----model----')
