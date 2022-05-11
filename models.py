@@ -117,7 +117,7 @@ class GATModel(nn.Module):
         ``len(hidden_feats)`` equals the number of GAT layers. By default, we use ``[32, 32]``.
     num_heads : list of int
         ``num_heads[i]`` gives the number of attention heads in the i-th GAT layer.
-        ``len(num_heads)`` equals the number of GAT layers. By default, we use 4 attention heads
+        ``len(num_heads)`` equals the number of GAT layers. By default, we use 1 attention heads
         for each GAT layer.
     feat_drops : list of float
         ``feat_drops[i]`` gives the dropout applied to the input features in the i-th GAT layer.
@@ -159,7 +159,7 @@ class GATModel(nn.Module):
 
         n_layers = len(hidden_feats)
         if num_heads is None:
-            num_heads = [4 for _ in range(n_layers)]
+            num_heads = [1 for _ in range(n_layers)]
         if feat_drops is None:
             feat_drops = [0.1 for _ in range(n_layers)]
         if attn_drops is None:

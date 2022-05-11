@@ -120,7 +120,7 @@ def main():
     # check cuda
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     #save path
-    file_savepath =f"./output/GNN_ablation_{args.model_name}_layer_{args.num_layers}_lr_{args.lr}_seed_{args.seed}"
+    file_savepath =f"./output/metrics/{args.model_name}/GNN_{args.model_name}_layer_{args.num_layers}_lr_{args.lr}_seed_{args.seed}"
     if not os.path.isdir(file_savepath):
         os.makedirs(file_savepath)
     print(file_savepath)
@@ -165,50 +165,61 @@ def main():
 
 
     '''inference'''
-    inference = False
-    if inference:
+    if args.inference:
         import pandas as pd
+        all_infer_result = pd.DataFrame()
         '''save folder'''
-        file_savepath = 'output/SMRT_result'
-        if not os.path.isdir(file_savepath):
-            os.makedirs(file_savepath)
-        print(file_savepath)
+        metric_file_savepath = 'output/SMRT_result'
+        if not os.path.isdir(metric_file_savepath):
+            os.makedirs(metric_file_savepath)
+        print(metric_file_savepath)
 
         '''load best model params'''
-        best_model_path = "/data/users/kangqiyue/kqy/DEEPGNN_RT/output/GNN_DEEPGNN_mlp1_layer_16_lr_0.001_seed_1/best_model_weight.pth"
-        # best_model_path = "D:\DEEPGNN_RT\output\GNN_DEEPGNN_mlp1_layer_16_lr_0.001_seed_1\\best_model_weight.pth"
+        # best_model_path = "/data/users/kangqiyue/kqy/DEEPGNN_RT/output/GNN_DEEPGNN_mlp1_layer_16_lr_0.001_seed_1/best_model_weight.pth"
+        best_model_path = os.path.join(file_savepath, "best_model_weight.pth")
         checkpoint = torch.load(best_model_path, map_location=device)  # 加载断点
         model.load_state_dict(checkpoint)  # 加载模型可学习参数
         print(f"model loaded from: {best_model_path}")
         model.to(device)
-        _, _, y, pred = test(model, device, train_dataloader, loss_fn, loss_MAE, return_pred=True)
-        #convert list to tensor
-        y = torch.cat(y)
-        pred = torch.cat(pred)
+        for i, dataloader in enumerate([train_dataloader, valid_dataloader, test_dataloader]):
+            _, _, y, pred = test(model, device, dataloader, loss_fn, loss_MAE, return_pred=True)
+            #convert list to tensor
+            y = torch.cat(y)
+            pred = torch.cat(pred)
 
-        y = y.reshape(-1, 1).cpu()
-        pred = pred.reshape(-1, 1).cpu()
-        print(f"y_test's shape: {y.shape}; pred's shape: {pred.shape}")
+            y = y.reshape(-1, 1).cpu()
+            pred = pred.reshape(-1, 1).cpu()
+            print(f"y_test's shape: {y.shape}; pred's shape: {pred.shape}")
 
-        # save pred dataset
-        result = torch.cat([y, pred], dim=1)
-        result = pd.DataFrame(result.cpu().numpy())
-        result.columns = ["y_label", "pred"]
-        result.to_csv(os.path.join(file_savepath, f"SMRT_train_prediction_result.csv"))
+            # save pred dataset
+            result = torch.cat([y, pred], dim=1)
+            result = pd.DataFrame(result.cpu().numpy())
+            result.columns = ["y_label", "pred"]
+            # result.to_csv(os.path.join(file_savepath, f"SMRT_train_prediction_result.csv"))
+            result.to_csv(os.path.join(metric_file_savepath, args.name+f"_{i}_prediction_data.csv" ))
 
-        from sklearn.metrics import median_absolute_error, r2_score, mean_absolute_error, mean_squared_error, \
-            mean_absolute_percentage_error
-        rt_summary = {
-            "mean_absolute_error": mean_absolute_error(y, pred),
-            "median_absolute_error": median_absolute_error(y, pred),
-            "mean_absolute_percentage_error": mean_absolute_percentage_error(y, pred),
-            "r2_score": r2_score(y, pred),
-            "mean_squared_error": mean_squared_error(y, pred)
-        }
-        print(rt_summary)
-        # rt_summary = pd.DataFrame(rt_summary)
-        # result.to_csv(os.path.join(file_savepath, f"SMRT_train_prediction_summary.csv"))
-        print("inference process finished !!! ")
+            from sklearn.metrics import median_absolute_error, r2_score, mean_absolute_error, mean_squared_error, \
+                mean_absolute_percentage_error
+            rt_summary = {
+                "mean_absolute_error": mean_absolute_error(y, pred),
+                "median_absolute_error": median_absolute_error(y, pred),
+                "mean_absolute_percentage_error": mean_absolute_percentage_error(y, pred),
+                "r2_score": r2_score(y, pred),
+                "mean_squared_error": mean_squared_error(y, pred),
+                "model_path": best_model_path,
+                "len of dataset": len(dataloader.dataset),
+                "model_name":model_name,
+                "gnn layers": num_layers,
+                "num of index":i
+            }
+            print(f"---------------"
+                  f"{best_model_path}; dataset {len(dataloader.dataset)}\n ")
+            print(rt_summary)
+            print(f"---------------")
+            rt_summary = pd.DataFrame.from_dict(rt_summary, orient="index")
+            all_infer_result = pd.concat([all_infer_result, rt_summary], axis=1)
+
+        all_infer_result.to_csv(os.path.join(metric_file_savepath, args.name+"_prediction_metrics.csv" ))
         return
 
 
@@ -298,6 +309,8 @@ if __name__ == '__main__':
     parser.add_argument('--early_stop', type=int, default=30, help='Early stop epoch.')
 
     parser.add_argument('--seed', type=int, default=1, help='set seed')
+
+    parser.add_argument("--inference", action="store_true", help="if inference")
 
     args = parser.parse_args()
     print(args)
