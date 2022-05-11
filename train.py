@@ -229,7 +229,7 @@ def main():
     print('----model----')
     print(model)
     print(f"---------params-------------")
-    from train_func import count_parameters, count_no_trainable_parameters, count_trainable_parameters
+    from utils import count_parameters, count_no_trainable_parameters, count_trainable_parameters
     print(f"all params: {count_parameters(model)}\n"
           f"trainable params: {count_trainable_parameters(model)}\n"
           f"freeze params: {count_no_trainable_parameters(model)}\n")

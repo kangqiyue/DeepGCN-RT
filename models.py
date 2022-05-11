@@ -739,7 +739,7 @@ class DeeperGCN(nn.Module):
 
 
 if __name__ == "__main__":
-    from train_func import count_parameters, count_no_trainable_parameters, count_trainable_parameters
+    from utils import count_parameters, count_no_trainable_parameters, count_trainable_parameters
     def print_param(model):
         print(f"all params: {count_parameters(model)}\n"
               f"trainable params: {count_trainable_parameters(model)}\n"
