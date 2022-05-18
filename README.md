@@ -1,6 +1,6 @@
 # DeepGNN-RT
 
-This repository correspond to the article: **Deep Graph Neutral Network for Small Molecules Retention Time Prediction and Their Transfer Learning**
+This repository correspond to the article: **Deep Graph Neutral Network for Small Molecule Retention Time Prediction and Their Transfer Learning**
 
 
 ##Note 
