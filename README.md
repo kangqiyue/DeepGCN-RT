@@ -1,6 +1,6 @@
 # DeepGNN-RT
 
-This repository correspond to the article: **Deep Graph Neutral Network for Small Molecule Retention Time Prediction and Their Transfer Learning**
+This repository correspond to the article: **Deep Graph Convolutional Network for Small-Molecule Retention Time Prediction**
 
 
 ## Note 
@@ -32,4 +32,3 @@ To run the inference code, the following command could be used:
     python inference.py \
     --SMILES "demo_SMILES"\
     --model_path "model path"
-
