@@ -1,35 +1,42 @@
 #!/bin/bash
 
 set -ex
-export WANDB_CONFIG_DIR="/data/users/kangqiyue/kqy/DEEPGNN_RT"
-model_name="DEEPGNN"
 
-
-for num_of_layer in 5 8 16
+for model_name in "GCN_sum" "GCN_mean" "GCN_attention_GRU" "DEEPGCN_sum_readout" "DEEPGCN_mean_readout" "DEEPGCN_attention_GRU"
 do
-CUDA_VISIBLE_DEVICES=2 python train.py \
-        --model_name=$model_name \
-        --seed=1 \
-        --num_layers=$num_of_layer \
 
-done
+    for num_of_layer in 3 5 8 16 24
+    do
+    CUDA_VISIBLE_DEVICES=0 python train.py \
+            --model_name=$model_name \
+            --seed=1 \
+            --num_layers=$num_of_layer \
+            --inference
 
-
-for num_of_layer in 5 8 16
-do
-CUDA_VISIBLE_DEVICES=2 python train.py \
-        --model_name=$model_name \
-        --seed=2 \
-        --num_layers=$num_of_layer \
-
-done
+    done
 
 
-for num_of_layer in 5 8 16
-do
-CUDA_VISIBLE_DEVICES=2 python train.py \
-        --model_name=$model_name \
-        --seed=3 \
-        --num_layers=$num_of_layer \
+    for num_of_layer in 3 5 8 16 24
+    do
+    CUDA_VISIBLE_DEVICES=0 python train.py \
+            --model_name=$model_name \
+            --seed=2 \
+            --num_layers=$num_of_layer \
+            --inference
+
+
+    done
+
+
+    for num_of_layer in 3 5 8 16 24
+    do
+    CUDA_VISIBLE_DEVICES=0 python train.py \
+            --model_name=$model_name \
+            --seed=3 \
+            --num_layers=$num_of_layer \
+            --inference
+
+
+    done
 
 done
