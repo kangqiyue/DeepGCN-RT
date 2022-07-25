@@ -5,7 +5,7 @@ This repository correspond to the article: **Deep Graph Convolutional Network fo
 
 ## Note 
 
-This repository contians GNN models for rentention time prediction, including DeepGCN-RT, and GCN models (GAT and GIN were implemented ). The _models.py dataset.py_ and _train.py_ contain the model, dataset, and train codes, respectively. 
+This repository contians GNN models for rentention time prediction, including DeepGCN-RT, and GCN models (GAT and GIN were also implemented). The _models.py dataset.py_ and _train.py_ contain the model, dataset, and train codes, respectively. 
 In addition, the _transfer_learning.py_ contains the transfer learning code(10 fold cross validation). The results of transfer learning for all models are contained in folder named _**result**_.
 
 ## Environment
