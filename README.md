@@ -32,3 +32,5 @@ To run the inference code, the following command could be used:
     python inference.py \
     --SMILES "demo_SMILES"\
     --model_path "model path"
+
+The train and transfer learning processes could also be started by the bash scripts, see the folder named _scripts_.
