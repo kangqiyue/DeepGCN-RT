@@ -231,7 +231,7 @@ class SMRTDatasetOneHot(DGLDataset):
         return len(self.graphs)
 
 
-def load_smrt_data_one_hot(random_state, demo = False, raw_dir = "/data/users/kangqiyue/kqy/DEEPGNN_RT/dataset"):
+def load_smrt_data_one_hot(random_state=42, demo = False, raw_dir = "/data/users/kangqiyue/kqy/DEEPGNN_RT/dataset"):
     if demo:
         train_dataset = SMRTDatasetOneHot(name="SMRT_train_demo", raw_dir=raw_dir)
         train_dataset, valid_dataset = dgl.data.utils.split_dataset(train_dataset, [0.9, 0.1], shuffle=True,random_state=random_state)
@@ -259,7 +259,7 @@ class TLDataset(SMRTDatasetOneHot):
         self.graphs, self.label = self._load_graph(filename)
 
     def _load_graph(self, filename):
-        self.dataset = pd.read_excel(os.path.join(self.raw_dir, filename))
+        self.dataset = pd.read_excel(os.path.join(self.raw_dir, filename), engine='openpyxl')
         data = self.dataset
         x_smiles = data["smiles"]
         g_labels = data["rt"]
@@ -290,7 +290,38 @@ class TLDataset(SMRTDatasetOneHot):
         self.label = label_dict['labels']
 
 
+class RikenDataset(TLDataset):
+    def __init__(self, name , raw_dir):
+        super().__init__(name= name, raw_dir=raw_dir)
+
+    def process(self):
+        filename = self.name + ".csv"
+        self.graphs, self.label = self._load_graph(filename)
+
+    def _load_graph(self, filename):
+        self.dataset = pd.read_csv(os.path.join(self.raw_dir, filename))
+        data = self.dataset
+        x_smiles = data["pred_smiles"]
+        g_labels = data["rt"]
+        g_labels = torch.tensor(g_labels, dtype=torch.float32)
+        graph_list = []
+        for i in tqdm(range(len(x_smiles))):
+            g = feature_to_dgl_graph(smiles2graph(x_smiles[i]))
+            # nx_plot(g)
+            graph_list.append(g)
+            if i % 1000 == 0:
+                print(i)
+        return graph_list, g_labels
+
 if __name__ == "__main__":
+    test = TLDataset(name= "Riken_Training", raw_dir="D:\DEEPGNN_RT\dataset\RIKEN")
+    test = TLDataset(name= "Riken_Test", raw_dir="D:\DEEPGNN_RT\dataset\RIKEN")
+    test = TLDataset(name= "RIKEN_External", raw_dir="D:\DEEPGNN_RT\dataset\RIKEN")
+    test = TLDataset(name= "Training_HILIC", raw_dir="D:\DEEPGNN_RT\dataset\RIKEN_HILIC")
+    test = TLDataset(name= "Test_HILIC", raw_dir="D:\DEEPGNN_RT\dataset\RIKEN_HILIC")
+    test = TLDataset(name= "Test_HILIC", raw_dir="D:\DEEPGNN_RT\dataset\RIKEN_HILIC")
+
+
     tl_list = [  'Cao_HILIC_116',
                  'Eawag_XBridgeC18_364',
                  'FEM_lipids_72',

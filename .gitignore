@@ -34,3 +34,5 @@
 /scripts/train_Kafp.sh
 /scripts/train_mlp_1.sh
 /scripts/train_mlp_1_24_32.sh
+/result/SMRT_result/
+/plot.py

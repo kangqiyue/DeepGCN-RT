@@ -11,11 +11,12 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
+import dgl
 from dgl.dataloading import GraphDataLoader
 
 from dataset import  load_smrt_data_one_hot, get_node_dim, get_edge_dim
 from dataset import get_node_dim, get_edge_dim
-from models import GATModel, GCNModel, GINModel, AttentivfFPModel, DeeperGCN
+from models import GCNModelWithEdgeAFPreadout
 from utils import count_parameters, count_no_trainable_parameters, count_trainable_parameters
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -29,8 +30,10 @@ def seed_torch(seed=1):
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed) # if you are using multi-GPU.
     torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
+    torch.use_deterministic_algorithms(True)
     torch.backends.cudnn.enabled = False
+    dgl.seed(seed)
+    dgl.random.seed(seed)
 
 
 # def train function
@@ -99,8 +102,12 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     #save path
-    file_savepath =f"./output/GNN_TL/{args.model_name}_{dataset_name}_seed{args.seed}"
-    result_save_path = f"./output/GNN_TL_result"
+    if args.best_model_file in ["no"]:
+        file_savepath = f"./output/GNN_TL_8_22_scratch/{args.model_name}_{dataset_name}_seed{args.seed}"
+        result_save_path = f"./output/GNN_TL_result_8_22_scratch"
+    else:
+        file_savepath =f"./output/GNN_TL_8_22/{args.model_name}_{dataset_name}_seed{args.seed}"
+        result_save_path = f"./output/GNN_TL_result_8_22"
     if not os.path.isdir(file_savepath):
         os.makedirs(file_savepath)
     if not os.path.isdir(result_save_path):
@@ -109,7 +116,7 @@ def main():
 
     '''dataset'''
     from dataset import TLDataset
-    dataset = TLDataset(name=dataset_name, raw_dir= "/data/users/kangqiyue/kqy/DEEPGNN_RT/dataset/10_subdataset/processed") #D:\Molecule\DEEPGNN_RT\test_data
+    dataset = TLDataset(name=dataset_name, raw_dir= "dataset/10_subdataset/processed") #D:\Molecule\DEEPGNN_RT\test_data
 
 
     '''k fold validation'''
@@ -124,15 +131,17 @@ def main():
         print(f'\nFOLD {fold}')
         print('--------------------------------')
         '''init model'''
-        model = DeeperGCN(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hid_dim=200, num_layers=num_layers,
-                          dropout=dropout, mlp_layers=args.mlp_layers)
+        model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(),hidden_feats=[200] * num_layers)
+        # model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[200]*num_layers, output_norm=args.norm,
+        #                                    residual=False, gru_out_layer= args.gru_out_layer, update_func=args.update_func)
 
         '''load best model params'''
-        best_model_path = "/data/users/kangqiyue/kqy/DEEPGNN_RT/output/GNN_DEEPGNN_mlp1_layer_16_lr_0.001_seed_1/best_model_weight.pth"
-        checkpoint = torch.load(best_model_path, map_location=device)  # 加载断点
-        model.load_state_dict(checkpoint)  # 加载模型可学习参数
-        print(f"model loaded from: {best_model_path}")
-        model.to(device)
+        if args.best_model_file not in ["no"]:
+            best_model_path = args.best_model_file
+            checkpoint = torch.load(best_model_path, map_location=device)  # 加载断点
+            model.load_state_dict(checkpoint)  # 加载模型可学习参数
+            print(f"model loaded from: {best_model_path}")
+            model.to(device)
 
         print('----args----')
         print('\n'.join([f'{k}: {v}' for k, v in vars(args).items()]))
@@ -264,6 +273,8 @@ if __name__ == '__main__':
     parser.add_argument('--num_layers', type=int, default=16, help='Number of GNN layers.')
     parser.add_argument('--mlp_layers', type=int, default=1, help='Number of MLP layers in DEEPGNN.')
     parser.add_argument('--hid_dim', type=int, default=200, help='Hidden channel size.')
+    parser.add_argument('--best_model_file', type=str, default='no', help='best model')
+
 
     # training args
     parser.add_argument('--epochs', type=int, default=200, help='Number of epochs to train.')

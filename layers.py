@@ -6,6 +6,7 @@ import dgl.function as fn
 from ogb.graphproppred.mol_encoder import BondEncoder
 from dgl.nn.functional import edge_softmax
 from modules import MLP, MessageNorm
+from dgl.nn.pytorch import GraphConv
 
 
 class GENConv(nn.Module):
@@ -75,7 +76,7 @@ class GENConv(nn.Module):
 
         # self.edge_encoder = BondEncoder(in_dim)
 
-    def forward(self, g, node_feats, edge_feats):
+    def forward(self, g, node_feats, edge_feats, return_edge=False):
         with g.local_scope():
             # Node and edge feature dimension need to match.
             g.ndata['h'] = node_feats
@@ -104,4 +105,173 @@ class GENConv(nn.Module):
             
             feats = node_feats + g.ndata['m']
             
-            return self.mlp(feats)
+            # return self.mlp(feats)
+            # return (self.mlp(feats), g.edata["m"]) if return_edge else self.mlp(feats)
+            if return_edge:
+                return self.mlp(feats), g.edata["m"]
+            else:
+                return self.mlp(feats)
+
+
+"adopted and modified from: https://lifesci.dgl.ai/_modules/dgllife/model/gnn/gcn.html#GCN"
+class GCNLayer(nn.Module):
+    r"""Single GCN layer from `Semi-Supervised Classification with Graph Convolutional Networks
+    <https://arxiv.org/abs/1609.02907>`__
+
+    Parameters
+    ----------
+    in_feats : int
+        Number of input node features.
+    out_feats : int
+        Number of output node features.
+    gnn_norm : str
+        The message passing normalizer, which can be `'right'`, `'both'` or `'none'`. The
+        `'right'` normalizer divides the aggregated messages by each node's in-degree.
+        The `'both'` normalizer corresponds to the symmetric adjacency normalization in
+        the original GCN paper. The `'none'` normalizer simply sums the messages.
+        Default to be 'none'.
+    activation : activation function
+        Default to be None.
+    residual : bool
+        Whether to use residual connection, default to be True.
+    output_norm : output normalization
+        "layer_norm", "batch_norm", "none"
+        default to be "none".
+    dropout : float
+        The probability for dropout. Default to be 0., i.e. no
+        dropout is performed.
+    """
+    def __init__(self, in_feats, out_feats, gnn_norm='both', activation=None,
+                 residual=True, output_norm="none", dropout=0.):
+        super(GCNLayer, self).__init__()
+
+        self.activation = activation
+        self.graph_conv = GraphConv(in_feats=in_feats, out_feats=out_feats,
+                                    norm=gnn_norm, activation=activation)
+        self.dropout = nn.Dropout(dropout)
+
+        self.residual = residual
+        # if residual:
+        #     self.res_connection = nn.Linear(in_feats, out_feats)
+
+        if output_norm == "batch_norm":
+            self.bn_layer = nn.BatchNorm1d(out_feats)
+            self.output_norm = True
+        elif output_norm == "layer_norm":
+            self.bn_layer = nn.LayerNorm(out_feats)
+            self.output_norm = True
+        elif output_norm == "none":
+            self.output_norm = False
+        else:
+            raise NotImplementedError
+
+    def reset_parameters(self):
+        """Reinitialize model parameters."""
+        self.graph_conv.reset_parameters()
+        if self.residual:
+            self.res_connection.reset_parameters()
+        if self.output_norm:
+            self.bn_layer.reset_parameters()
+
+    def forward(self, g, feats):
+        """Update node representations.
+
+        Parameters
+        ----------
+        g : DGLGraph
+            DGLGraph for a batch of graphs
+        feats : FloatTensor of shape (N, M1)
+            * N is the total number of nodes in the batch of graphs
+            * M1 is the input node feature size, which must match in_feats in initialization
+
+        Returns
+        -------
+        new_feats : FloatTensorTensor of shape (N, M2)
+            * M2 is the output node feature size, which must match out_feats in initialization
+        """
+        new_feats = self.graph_conv(g, feats)
+        new_feats = self.activation(new_feats)
+        new_feats = self.dropout(new_feats)
+        if self.residual:
+            new_feats = new_feats + feats
+
+        if self.output_norm:
+            new_feats = self.bn_layer(new_feats)
+
+        return new_feats
+
+
+"adopted and modified from: https://lifesci.dgl.ai/_modules/dgllife/model/gnn/gcn.html#GCN"
+class GCNLayerWithEdge(nn.Module):
+    def __init__(self, in_feats, out_feats, activation=None,
+                 residual=True, output_norm="none", dropout=0., update_func="no_relu"):
+        super(GCNLayerWithEdge, self).__init__()
+
+        self.activation = activation
+        self.mlp = nn.Linear(in_feats, out_feats)
+        self.dropout = nn.Dropout(dropout)
+        self.residual = residual
+        self.aggr = update_func # relu, relu_eps_beta, no_relu
+
+        if self.aggr == "relu_eps_beta":
+            #for relu eps beta
+            self.eps=1e-7
+            self.beta = nn.Parameter(torch.Tensor([1.0]), requires_grad=True)
+
+        if output_norm == "batch_norm":
+            self.bn_layer = nn.BatchNorm1d(out_feats)
+            self.output_norm = True
+        elif output_norm == "layer_norm":
+            self.bn_layer = nn.LayerNorm(out_feats)
+            self.output_norm = True
+        elif output_norm == "none":
+            self.output_norm = False
+        else:
+            raise NotImplementedError
+
+    def reset_parameters(self):
+        """Reinitialize model parameters."""
+        self.graph_conv.reset_parameters()
+        if self.residual:
+            self.res_connection.reset_parameters()
+        if self.bn:
+            self.bn_layer.reset_parameters()
+
+    def forward(self, g, node_feats, edge_feats):
+        with g.local_scope():
+            # Node and edge feature dimension need to match.
+            g.ndata['h'] = node_feats
+            g.edata['h'] = edge_feats
+            g.apply_edges(fn.u_add_e('h', 'h', 'm'))
+
+
+            if self.aggr == 'relu_eps_beta':
+                g.edata['m'] = F.relu(g.edata['m']) + self.eps
+                g.edata['a'] = edge_softmax(g, g.edata['m'] * self.beta)
+                g.update_all(lambda edge: {'x': edge.data['m'] * edge.data['a']},
+                             fn.sum('x', 'm'))
+            elif self.aggr == "no_relu":
+                g.edata['a'] = edge_softmax(g, g.edata['m'])
+                g.update_all(lambda edge: {'x': edge.data['m'] * edge.data['a']},
+                             fn.sum('x', 'm'))
+            elif self.aggr == "relu":
+                # relu activation; have softmax aggration
+                g.edata['m'] = F.relu(g.edata['m'])
+                g.edata['a'] = edge_softmax(g, g.edata['m'])
+                g.update_all(lambda edge: {'x': edge.data['m'] * edge.data['a']},
+                             fn.sum('x', 'm'))
+            else:
+                raise NotImplementedError
+
+
+            new_feats = g.ndata['m']
+            new_feats = self.mlp(new_feats)
+            new_feats = self.activation(new_feats)
+            new_feats = self.dropout(new_feats)
+
+            if self.residual:
+                new_feats = new_feats + node_feats
+            if self.output_norm:
+                new_feats = self.bn_layer(new_feats)
+
+            return new_feats
