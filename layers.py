@@ -174,21 +174,6 @@ class GCNLayer(nn.Module):
             self.bn_layer.reset_parameters()
 
     def forward(self, g, feats):
-        """Update node representations.
-
-        Parameters
-        ----------
-        g : DGLGraph
-            DGLGraph for a batch of graphs
-        feats : FloatTensor of shape (N, M1)
-            * N is the total number of nodes in the batch of graphs
-            * M1 is the input node feature size, which must match in_feats in initialization
-
-        Returns
-        -------
-        new_feats : FloatTensorTensor of shape (N, M2)
-            * M2 is the output node feature size, which must match out_feats in initialization
-        """
         new_feats = self.graph_conv(g, feats)
         new_feats = self.activation(new_feats)
         new_feats = self.dropout(new_feats)
@@ -262,7 +247,6 @@ class GCNLayerWithEdge(nn.Module):
                              fn.sum('x', 'm'))
             else:
                 raise NotImplementedError
-
 
             new_feats = g.ndata['m']
             new_feats = self.mlp(new_feats)
