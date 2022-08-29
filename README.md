@@ -15,22 +15,34 @@ The environment dependencies for Linux system are contained in the file named _*
 ## Run the code
 To run the training code, the following command could be used:
 
-    python train.py \
-    --model_name "DEEPGNN" \
-    --dataset "SMRT"
-    --num_layers 16 \
-    --hid_dim 200 \
-    --epochs 200 \
-    --lr 0.001 \
-    --batch_size 64\
-    --early_stop 30 \
-    --seed 1 
+```
+python train.py \
+--model_name "GCN_edge_attention_GRU" \
+--dataset "SMRT"
+--num_layers 16 \
+--hid_dim 200 \
+--epochs 200 \
+--lr 0.001 \
+--batch_size 64\
+--early_stop 30 \
+--seed 1 
+```
+In addition, the train and transfer learning processes could also be started by the bash scripts, see the folder named _scripts_.
+To run the training process on SMRT data set:
+```
+sh scripts/train.sh
+```
 
+
+To run the transfer learning on 9 TL data sets, use:
+```
+scripts/transfer_learning.sh
+```
 
 To run the inference code, the following command could be used:
+```
+python inference.py \
+--SMILES "demo_SMILES"\
+--model_path "model path"
+```
 
-    python inference.py \
-    --SMILES "demo_SMILES"\
-    --model_path "model path"
-
-The train and transfer learning processes could also be started by the bash scripts, see the folder named _scripts_.
