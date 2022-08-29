@@ -132,8 +132,6 @@ def main():
         print('--------------------------------')
         '''init model'''
         model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(),hidden_feats=[200] * num_layers)
-        # model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[200]*num_layers, output_norm=args.norm,
-        #                                    residual=False, gru_out_layer= args.gru_out_layer, update_func=args.update_func)
 
         '''load best model params'''
         if args.best_model_file not in ["no"]:
@@ -141,7 +139,7 @@ def main():
             checkpoint = torch.load(best_model_path, map_location=device)  # 加载断点
             model.load_state_dict(checkpoint)  # 加载模型可学习参数
             print(f"model loaded from: {best_model_path}")
-            model.to(device)
+        model.to(device)
 
         print('----args----')
         print('\n'.join([f'{k}: {v}' for k, v in vars(args).items()]))
