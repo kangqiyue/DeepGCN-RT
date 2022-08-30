@@ -109,10 +109,7 @@ def main():
     batch_size = args.batch_size
     early_stop = args.early_stop
     lr = args.lr
-    dropout = args.dropout
-    num_layers = args.num_layers
     model_name = args.model_name
-    hid_dim = args.hid_dim
     loss_fn = nn.SmoothL1Loss(reduction="mean")
     loss_MAE = nn.L1Loss(reduction="mean")
     # check cuda
@@ -132,20 +129,20 @@ def main():
 
     '''init model'''
     if model_name == "GCN_attention_GRU":
-        model = GCNModelAFPreadout(node_in_dim=get_node_dim(), hidden_feats=[200]*num_layers, output_norm=args.norm, gru_out_layer=args.gru_out_layer)
+        model = GCNModelAFPreadout(node_in_dim=get_node_dim(), hidden_feats=[args.hid_dim]*args.num_layers, output_norm=args.norm, gru_out_layer=args.gru_out_layer, dropout=args.dropout)
     elif model_name == "GCN_edge_attention_GRU":
-        model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[200]*num_layers, output_norm=args.norm,
-                                           gru_out_layer= args.gru_out_layer, update_func=args.update_func)
+        model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[args.hid_dim]*args.num_layers, output_norm=args.norm,
+                                           gru_out_layer= args.gru_out_layer, update_func=args.update_func, dropout=args.dropout)
     elif model_name == "GCN_edge_attention_GRU_without_residual":
-        model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[200]*num_layers, output_norm=args.norm,
-                                           residual=False, gru_out_layer= args.gru_out_layer, update_func=args.update_func)
+        model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[args.hid_dim]*args.num_layers, output_norm=args.norm,
+                                           residual=False, gru_out_layer= args.gru_out_layer, update_func=args.update_func, dropout=args.dropout)
     elif model_name == "GCN_edge_mean":
-        model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[200]*num_layers, output_norm=args.norm,
-                                           gru_out_layer= args.gru_out_layer, update_func=args.update_func)
+        model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[args.hid_dim]*args.num_layers, output_norm=args.norm,
+                                           gru_out_layer= args.gru_out_layer, update_func=args.update_func, dropout=args.dropout)
         model.readout = AvgPooling()
     elif model_name == "GCN_edge_sum":
-        model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[200]*num_layers, output_norm=args.norm,
-                                           gru_out_layer= args.gru_out_layer, update_func=args.update_func,)
+        model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[args.hid_dim]*args.num_layers, output_norm=args.norm,
+                                           gru_out_layer= args.gru_out_layer, update_func=args.update_func,dropout=args.dropout)
         model.readout = SumPooling()
     # elif model_name == "GCN_edge_attention_GRU_1_layer":
     #     args.gru_out_layer = 1
@@ -153,8 +150,8 @@ def main():
     #     model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[200]*num_layers, output_norm=args.norm,
     #                                        gru_out_layer= args.gru_out_layer, update_func=args.update_func)
     elif model_name == "GCN_edge_attention_GRU_no_denselayer":
-        model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[200]*num_layers, output_norm=args.norm,
-                                           gru_out_layer= args.gru_out_layer, update_func=args.update_func)
+        model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[args.hid_dim]*args.num_layers, output_norm=args.norm,
+                                           gru_out_layer= args.gru_out_layer, update_func=args.update_func,dropout=args.dropout)
         model.out = nn.Linear(200, 1)
     else:
         raise NotImplementedError(f'Aggregator {args.model_name} is not supported.')
@@ -203,7 +200,7 @@ def main():
                 "model_path": best_model_path,
                 "len of dataset": len(dataloader.dataset),
                 "model_name":model_name,
-                "gnn layers": num_layers,
+                "gnn layers": args.num_layers,
                 "num of index":i
             }
             print(f"---------------"
@@ -314,8 +311,6 @@ if __name__ == '__main__':
 
     # GNN model args
     parser.add_argument('--num_layers', type=int, default=16, help='Number of GNN layers.')
-    parser.add_argument('--mlp_layers', type=int, default=1, help='Number of MLP layers in DEEPGNN.')
-    parser.add_argument('--hid_dim', type=int, default=200, help='Hidden channel size.')
     parser.add_argument('--gru_out_layer', type=int, default=2, help='readout layer')
     parser.add_argument('--norm', type=str, default='none', help='choose from: batch_norm, layer_norm, none')
     parser.add_argument('--update_func', type=str, default='no_relu', help='choose from: batch_norm, layer_norm, none')
@@ -329,7 +324,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=1, help='set seed')
 
     #inference or not
-    parser.add_argument("--inference", action="store_true", help="if inference")
+    parser.add_argument("--inference", action="store_true", help="Whether inference")
 
     args = parser.parse_args()
     print(args)

@@ -131,7 +131,9 @@ def main():
         print(f'\nFOLD {fold}')
         print('--------------------------------')
         '''init model'''
-        model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(),hidden_feats=[200] * num_layers)
+        # model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(),hidden_feats=[200] * num_layers)
+        model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[200] * args.num_layers,
+                                           output_norm="none", gru_out_layer=2, dropout=args.dropout)
 
         '''load best model params'''
         if args.best_model_file not in ["no"]:
@@ -265,23 +267,22 @@ if __name__ == '__main__':
     #wandb name, dataset name, model name
     parser.add_argument('--name', type=str, default="test", help='wandb_running_name')
     parser.add_argument('--dataset', type=str, default='transfer learning', help='Name of dataset.')
-    parser.add_argument('--model_name', type=str, default='DEEPGNN', help='Name of model, choose from: GAT, GCN, GIN, AFP, DEEPGNN')
+    parser.add_argument('--model_name', type=str, default='GCN_edge_attention_GRU', help='Name of model, choose from: GAT, GCN, GIN, AFP, DEEPGNN')
 
     # GNN model args
     parser.add_argument('--num_layers', type=int, default=16, help='Number of GNN layers.')
-    parser.add_argument('--mlp_layers', type=int, default=1, help='Number of MLP layers in DEEPGNN.')
     parser.add_argument('--hid_dim', type=int, default=200, help='Hidden channel size.')
-    parser.add_argument('--best_model_file', type=str, default='no', help='best model')
-
 
     # training args
     parser.add_argument('--epochs', type=int, default=200, help='Number of epochs to train.')
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
-    parser.add_argument('--dropout', type=float, default=0, help='Dropout rate.')
+    parser.add_argument('--dropout', type=float, default=0.1, help='Dropout rate.')
     parser.add_argument('--batch_size', type=int, default=8, help='Batch size.')
     parser.add_argument('--early_stop', type=int, default=30, help='Early stop epoch.')
 
     parser.add_argument('--seed', type=int, default=0, help='set seed')
+    parser.add_argument('--best_model_file', type=str, default='no', help='best model')
+
 
     args = parser.parse_args()
     print(args)
