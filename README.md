@@ -1,15 +1,16 @@
 # DeepGNN-RT
 
-This repository correspond to the article: **Deep Graph Convolutional Network for Small-Molecule Retention Time Prediction**
+This repository correspond to the article: **Deep Graph Convolutional Network for Small-Molecule Retention Time Prediction**.
+
 
 
 ## Note 
 
-This repository contians GNN models for rentention time prediction, including DeepGCN-RT, and GCN models (GAT and GIN were also implemented). The _models.py dataset.py_ and _train.py_ contain the model, dataset, and train codes, respectively. 
-In addition, the _transfer_learning.py_ contains the transfer learning code(10 fold cross validation). The results of transfer learning for all models are contained in folder named _**result**_.
+This repository contians GNN models for rentention time prediction, including DeepGCN-RT, and GCN models (GAT and GIN were also implemented). The ```models.py dataset.py and train.py``` contain the model, dataset, and train codes, respectively. 
+In addition, the ```transfer_learning.py``` contains the transfer learning code(10 fold cross validation). The results of transfer learning for all models are contained in folder named ```result```.
 
 ## Environment
-The environment dependencies for Linux system are contained in the file named _**environment.yaml**_.
+The environment dependencies for Linux system are contained in the file named ```environment.yaml```. Use ```conda update``` to build the environment.
 
 
 ## Run the code
@@ -27,14 +28,15 @@ python train.py \
 --early_stop 30 \
 --seed 1 
 ```
-In addition, the train and transfer learning processes could also be started by the bash scripts, see the folder named _scripts_.
+In addition, the train and transfer learning processes could also be started by the bash scripts, see the folder named ```scripts```.
+
 To run the training process on SMRT data set:
 ```
 sh scripts/train.sh
 ```
 
 
-To run the transfer learning on 9 TL data sets, use:
+To run the transfer learning on nine transfer learning data sets, use:
 ```
 scripts/transfer_learning.sh
 ```
