@@ -821,16 +821,16 @@ if __name__ == "__main__":
 
 
 
-    #DeepGCN model test
-    model = DeeperGCN(164, 11, 200, 5, 0.1)
-    print(model)
-    out = model(g)
-    print(out)
-
-    model = DeeperGCNUpdateEdge(164, 11, 200, 5, 0.1)
-    print(model)
-    out = model(g)
-    print(out)
+    # #DeepGCN model test
+    # model = DeeperGCN(164, 11, 200, 5, 0.1)
+    # print(model)
+    # out = model(g)
+    # print(out)
+    #
+    # model = DeeperGCNUpdateEdge(164, 11, 200, 5, 0.1)
+    # print(model)
+    # out = model(g)
+    # print(out)
 
 
 
