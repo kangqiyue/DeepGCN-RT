@@ -13,71 +13,6 @@ from dgllife.model.readout.attentivefp_readout import AttentiveFPReadout
 from layers import GCNLayer, GCNLayerWithEdge
 
 
-class GINLayerModified(nn.Module):
-    def __init__(self, num_edge_emb, emb_dim, batch_norm=True, activation=None):
-        super(GINLayerModified, self).__init__()
-        self.edge_embeddings = nn.Linear(num_edge_emb, emb_dim)
-        self.mlp = nn.Sequential(
-            nn.Linear(emb_dim, 2 * emb_dim),
-            nn.ReLU(),
-            nn.Linear(2 * emb_dim, emb_dim)
-        )
-
-        if batch_norm:
-            self.bn = nn.BatchNorm1d(emb_dim)
-        else:
-            self.bn = None
-        self.activation = activation
-
-    def reset_parameters(self):
-        """Reinitialize model parameters."""
-        for layer in self.mlp:
-            if isinstance(layer, nn.Linear):
-                layer.reset_parameters()
-
-        self.edge_embeddings.reset_parameters()
-
-        if self.bn is not None:
-            self.bn.reset_parameters()
-
-    def forward(self, g, node_feats, edge_feats):
-        edge_embeds = self.edge_embeddings(edge_feats)
-        g.ndata['feat'] = node_feats
-        g.edata['feat'] = edge_embeds
-        g.update_all(fn.u_add_e('feat', 'feat', 'm'), fn.sum('m', 'feat'))
-
-        node_feats = self.mlp(g.ndata.pop('feat'))
-        if self.bn is not None:
-            node_feats = self.bn(node_feats)
-        if self.activation is not None:
-            node_feats = self.activation(node_feats)
-
-        return node_feats
-
-
-# class EmbeddingLayer(nn.Module):
-#     def __init__(self, node_emb_dim, edge_emb_dim=None):
-#         super(EmbeddingLayer, self).__init__()
-#         self.node_emb_dim= node_emb_dim
-#         self.edge_emb_dim=edge_emb_dim
-#
-#         self.atom_encoder = AtomEncoder(node_emb_dim)
-#         self.float_node_embeddings = nn.Linear(6, node_emb_dim, bias=False)
-#         if edge_emb_dim is not None:
-#             self.bond_encoder = BondEncoder(edge_emb_dim)
-#
-#     def forward(self, g):
-#         node_feats, edge_feats, node_float_feats = g.ndata["node_feat"], g.edata["edge_feat"], g.ndata["node_float_feat"]
-#         node_feats = self.atom_encoder(node_feats)
-#         node_feats += self.float_node_embeddings(node_float_feats)
-#
-#         if self.edge_emb_dim is None:
-#             return node_feats
-#         else:
-#             edge_feats = self.bond_encoder(edge_feats)
-#             return  node_feats, edge_feats
-
-
 class EmbeddingLayerConcat(nn.Module):
     def __init__(self, node_in_dim, node_emb_dim, edge_in_dim=None, edge_emb_dim=None):
         super(EmbeddingLayerConcat, self).__init__()
@@ -293,6 +228,71 @@ class GCNModelWithEdgeAFPreadout(nn.Module):
         out = self.out(out)
         return out
 
+
+
+class GINLayerModified(nn.Module):
+    def __init__(self, num_edge_emb, emb_dim, batch_norm=True, activation=None):
+        super(GINLayerModified, self).__init__()
+        self.edge_embeddings = nn.Linear(num_edge_emb, emb_dim)
+        self.mlp = nn.Sequential(
+            nn.Linear(emb_dim, 2 * emb_dim),
+            nn.ReLU(),
+            nn.Linear(2 * emb_dim, emb_dim)
+        )
+
+        if batch_norm:
+            self.bn = nn.BatchNorm1d(emb_dim)
+        else:
+            self.bn = None
+        self.activation = activation
+
+    def reset_parameters(self):
+        """Reinitialize model parameters."""
+        for layer in self.mlp:
+            if isinstance(layer, nn.Linear):
+                layer.reset_parameters()
+
+        self.edge_embeddings.reset_parameters()
+
+        if self.bn is not None:
+            self.bn.reset_parameters()
+
+    def forward(self, g, node_feats, edge_feats):
+        edge_embeds = self.edge_embeddings(edge_feats)
+        g.ndata['feat'] = node_feats
+        g.edata['feat'] = edge_embeds
+        g.update_all(fn.u_add_e('feat', 'feat', 'm'), fn.sum('m', 'feat'))
+
+        node_feats = self.mlp(g.ndata.pop('feat'))
+        if self.bn is not None:
+            node_feats = self.bn(node_feats)
+        if self.activation is not None:
+            node_feats = self.activation(node_feats)
+
+        return node_feats
+
+
+# class EmbeddingLayer(nn.Module):
+#     def __init__(self, node_emb_dim, edge_emb_dim=None):
+#         super(EmbeddingLayer, self).__init__()
+#         self.node_emb_dim= node_emb_dim
+#         self.edge_emb_dim=edge_emb_dim
+#
+#         self.atom_encoder = AtomEncoder(node_emb_dim)
+#         self.float_node_embeddings = nn.Linear(6, node_emb_dim, bias=False)
+#         if edge_emb_dim is not None:
+#             self.bond_encoder = BondEncoder(edge_emb_dim)
+#
+#     def forward(self, g):
+#         node_feats, edge_feats, node_float_feats = g.ndata["node_feat"], g.edata["edge_feat"], g.ndata["node_float_feat"]
+#         node_feats = self.atom_encoder(node_feats)
+#         node_feats += self.float_node_embeddings(node_float_feats)
+#
+#         if self.edge_emb_dim is None:
+#             return node_feats
+#         else:
+#             edge_feats = self.bond_encoder(edge_feats)
+#             return  node_feats, edge_feats
 
 
 
@@ -700,127 +700,24 @@ class DeeperGCN(nn.Module):
             out = self.out(out)
             return out
 
-#
-# '''DeeperGCN with edge'''
-# class DeeperGCNUpdateEdge(nn.Module):
-#     r"""
-#
-#     Description
-#     -----------
-#     Introduced in `DeeperGCN: All You Need to Train Deeper GCNs <https://arxiv.org/abs/2006.07739>`_
-#
-#     Parameters
-#     ----------
-#     node_feat_dim: int
-#         Size of node feature dimension.
-#     edge_feat_dim: int
-#         Size of edge feature dimension.
-#     hid_dim: int
-#         Size of hidden dimension.
-#     out_dim: int
-#         Size of output dimension.
-#     num_layers: int
-#         Number of graph convolutional layers.
-#     dropout: float
-#         Dropout rate. Default is 0.
-#     norm: str
-#         Type of ('batch', 'layer', 'instance') norm layer in MLP layers. Default is 'batch'.
-#     pooling: str
-#         Type of ('sum', 'mean', 'max') pooling layer. Default is 'mean'.
-#     beta: float
-#         A continuous variable called an inverse temperature. Default is 1.0.
-#     lean_beta: bool
-#         Whether beta is a learnable weight. Default is False.
-#     aggr: str
-#         Type of aggregator scheme ('softmax', 'power'). Default is 'softmax'.
-#     mlp_layers: int
-#         Number of MLP layers in message normalization. Default is 1.
-#     """
-#
-#     def __init__(self,
-#                  node_in_dim,
-#                  edge_in_dim,
-#                  hid_dim,
-#                  num_layers,
-#                  dropout=0,
-#                  norm='layer',
-#                  beta=1.0,
-#                  learn_beta=True,
-#                  aggr='softmax',
-#                  mlp_layers=1,
-#                  num_timesteps=2,
-#                  ):
-#         super(DeeperGCNUpdateEdge, self).__init__()
-#
-#         self.num_layers = num_layers
-#         self.dropout = dropout
-#
-#         self.gcns = nn.ModuleList()
-#         self.norms = nn.ModuleList()
-#         self.node_encoder = nn.Linear(node_in_dim, hid_dim)
-#         self.edge_encoder = nn.Linear(edge_in_dim,hid_dim)
-#
-#         for i in range(self.num_layers):
-#             conv = GENConv(in_dim=hid_dim,
-#                            out_dim=hid_dim,
-#                            aggregator=aggr,
-#                            beta=beta,
-#                            learn_beta=learn_beta,
-#                            mlp_layers=mlp_layers,
-#                            norm = norm
-#                            )
-#
-#             self.gcns.append(conv)
-#             self.norms.append(norm_layer(norm, hid_dim))
-#
-#         self.readout=  AttentiveFPReadout(
-#             hid_dim, num_timesteps = num_timesteps, dropout = dropout
-#         )
-#         # self.out = nn.Sequential(
-#         #     nn.Linear(hid_dim, 1024),
-#         #     nn.ReLU(),
-#         #     nn.Linear(1024, 1)
-#         # )
-#         self.out = nn.Linear(hid_dim, 1)
-#
-#
-#     def forward(self, g):
-#         node_feats, edge_feats = g.ndata["node_feat"], g.edata["edge_feat"]
-#
-#         with g.local_scope():
-#             hv = self.node_encoder(node_feats)
-#             # hv += self.float_node_embeddings(node_float_feats)
-#             he = self.edge_encoder(edge_feats)
-#
-#             for layer in range(self.num_layers):
-#                 hv1 = self.norms[layer](hv)
-#                 hv1 = F.relu(hv1)
-#                 hv1 = F.dropout(hv1, p=self.dropout, training=self.training)
-#                 updated = self.gcns[layer](g=g, node_feats=hv1, edge_feats=he, return_edge=True)
-#                 hv1, he1 = updated[0], updated[1]
-#                 hv = hv1 + hv
-#                 he = he1 + he
-#
-#             out = self.readout(g, hv)
-#             out = self.out(out)
-#             return out
-
 
 if __name__ == "__main__":
-    from utils import count_parameters, count_no_trainable_parameters, count_trainable_parameters
-    def print_param(model):
-        print(f"all params: {count_parameters(model)}\n"
-              f"trainable params: {count_trainable_parameters(model)}\n"
-              f"freeze params: {count_no_trainable_parameters(model)}\n")
+    pass
 
 
-    from dataset import SMRTDatasetOneHot
-    test_dataset = SMRTDatasetOneHot(name= "SMRT_test_demo", raw_dir="D:\DEEPGNN_RT\dataset")
-    test_dataloader = GraphDataLoader(test_dataset, batch_size=6)
-    g = test_dataset[0][0]
-
-
-
+    # from utils import count_parameters, count_no_trainable_parameters, count_trainable_parameters
+    # def print_param(model):
+    #     print(f"all params: {count_parameters(model)}\n"
+    #           f"trainable params: {count_trainable_parameters(model)}\n"
+    #           f"freeze params: {count_no_trainable_parameters(model)}\n")
+    #
+    #
+    # from dataset import SMRTDatasetOneHot
+    # test_dataset = SMRTDatasetOneHot(name= "SMRT_test_demo", raw_dir="D:\DEEPGNN_RT\dataset")
+    # test_dataloader = GraphDataLoader(test_dataset, batch_size=6)
+    # g = test_dataset[0][0]
+    #
+    #
     # #DeepGCN model test
     # model = DeeperGCN(164, 11, 200, 5, 0.1)
     # print(model)
