@@ -18,7 +18,7 @@ from dgl.nn import SumPooling, AvgPooling
 
 from dataset import  load_smrt_data_one_hot, get_node_dim, get_edge_dim
 from dataset import get_node_dim, get_edge_dim
-from models import GATModel, GCNModel, GINModel, AttentivfFPModel, DeeperGCN, GCNModelAFPreadout, GCNModelWithEdgeAFPreadout
+from models import GCNModelAFPreadout, GCNModelWithEdgeAFPreadout
 from utils import count_parameters, count_no_trainable_parameters, count_trainable_parameters
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
