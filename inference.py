@@ -36,7 +36,7 @@ if __name__ == '__main__':
     Model Hyperparameters
     """
     parser = argparse.ArgumentParser(description='GNN_RT_MODEL_inference')
-    parser.add_argument('--SMILES', type=str, help='SMILES of the small molecule')
+    parser.add_argument('--SMILES', type=str, required=True, help='SMILES of the small molecule')
     parser.add_argument('--model_path', type=str,default="model_path/best_model_weight.pth", help='model path for DeepGCN-RT')
     args = parser.parse_args()
     print(args)
