@@ -39,7 +39,6 @@ def seed_torch(seed=1):
     dgl.random.seed(seed)
 
 
-
 def train(model, device, dataloader, optimizer, loss_fn, loss_fn_MAE,):
     num_batches = len(dataloader)
     train_loss = 0
