@@ -143,10 +143,6 @@ def main():
         model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[args.hid_dim]*args.num_layers, output_norm=args.norm,
                                            gru_out_layer= args.gru_out_layer, update_func=args.update_func,dropout=args.dropout)
         model.readout = SumPooling()
-    # elif model_name == "GCN_edge_attention_GRU_no_denselayer":
-    #     model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[args.hid_dim]*args.num_layers, output_norm=args.norm,
-    #                                        gru_out_layer= args.gru_out_layer, update_func=args.update_func,dropout=args.dropout)
-    #     model.out = nn.Linear(200, 1)
     else:
         raise NotImplementedError(f'Aggregator {args.model_name} is not supported.')
 
