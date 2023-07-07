@@ -4,7 +4,7 @@ set -ex
 export CUBLAS_WORKSPACE_CONFIG=:16:8
 
 
-for name in "GCN_attention_GRU" "GCN_edge_attention_GRU" "GCN_edge_attention_GRU_without_residual" "GCN_edge_mean" "GCN_edge_sum"
+for name in "normal_GCN" "GCN_edge" "GCN_edge_residual" "DeepGCN-RT"
 do
   for s in 1 2 3
   do
@@ -13,7 +13,8 @@ do
     CUDA_VISIBLE_DEVICES=0 /zhangshuai/software/anaconda3/envs/dgl/bin/python train.py \
             --model_name=$name \
             --seed=$s \
-            --num_layers=$num_of_layer
+            --num_layers=$num_of_layer \
+            --inference
 
     done
   done
