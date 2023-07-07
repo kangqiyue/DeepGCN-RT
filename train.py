@@ -98,7 +98,7 @@ def main():
         for line in f:
             key, val = line.strip().split("=", 1)
             os.environ[key] = val
-    wandb.init(project="deepGNN_22_8_3_inference", entity="qwertyer")
+    wandb.init(project="deepGNN_proj")
     args.name = f"{args.model_name}_{args.norm}_{args.num_layers}_lr_{args.lr}_seed_{args.seed}"
     wandb.run.name = args.name
     wandb.config.update(args)  # adds all of the arguments as config variables
@@ -114,7 +114,7 @@ def main():
     # check cuda
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     #save path
-    file_savepath =f"./output/deep_gnn_22_8_3/{args.model_name}/{args.name}"
+    file_savepath =f"./output/deep_gnn_output/{args.model_name}/{args.name}"
     if not os.path.isdir(file_savepath):
         os.makedirs(file_savepath)
     print(file_savepath)
@@ -127,18 +127,27 @@ def main():
     test_dataloader = GraphDataLoader(test_dataset, batch_size=len(test_dataset))
 
     '''init model'''
-    if model_name == "GCN_attention_GRU":
-        model = GCNModelAFPreadout(node_in_dim=get_node_dim(), hidden_feats=[args.hid_dim]*args.num_layers, output_norm=args.norm, gru_out_layer=args.gru_out_layer, dropout=args.dropout)
-    elif model_name == "GCN_edge_attention_GRU":
+    if model_name == "normal_GCN":
+        from models import GCNModel # normal GCN, without_edge, without_residual
+        model = GCNModel(node_in_dim=get_node_dim(), hidden_feats=[args.hid_dim]*args.num_layers, output_norm=args.norm, gru_out_layer=args.gru_out_layer, dropout=args.dropout, residual=False)
+    elif model_name == "GCN_edge": #GCN with edge, without residual
+        from models import GCNModelWithEdge
+        model = GCNModelWithEdge(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[args.hid_dim]*args.num_layers, output_norm=args.norm,
+                                           update_func=args.update_func, dropout=args.dropout, residual=False)
+    elif model_name == "GCN_edge_residual": #GCN with edge, with residual
+        model = GCNModelWithEdge(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[args.hid_dim] * args.num_layers, output_norm=args.norm,
+                                 update_func=args.update_func, dropout=args.dropout, residual=True)
+    elif model_name == "DeepGCN-RT": # GCN with edge, with residual, attention readout
+        # Note: this is the DeepGCN-RT model, GCN_edge_attention_GRU
         model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[args.hid_dim]*args.num_layers, output_norm=args.norm,
-                                           gru_out_layer= args.gru_out_layer, update_func=args.update_func, dropout=args.dropout)
-    elif model_name == "GCN_edge_attention_GRU_without_residual":
+                                           gru_out_layer= args.gru_out_layer, update_func=args.update_func, dropout=args.dropout, residual=True)
+
+    elif model_name == "GCN_attention_GRU": # without edge info, but has residual and attention readout
+        model = GCNModelAFPreadout(node_in_dim=get_node_dim(), hidden_feats=[args.hid_dim]*args.num_layers, output_norm=args.norm, gru_out_layer=args.gru_out_layer, dropout=args.dropout)
+
+    elif model_name == "GCN_edge_attention_GRU_without_residual": # without residual; but has edge info, and
         model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[args.hid_dim]*args.num_layers, output_norm=args.norm,
                                            residual=False, gru_out_layer= args.gru_out_layer, update_func=args.update_func, dropout=args.dropout)
-    elif model_name == "GCN_edge_mean":
-        model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[args.hid_dim]*args.num_layers, output_norm=args.norm,
-                                           gru_out_layer= args.gru_out_layer, update_func=args.update_func, dropout=args.dropout)
-        model.readout = AvgPooling()
     elif model_name == "GCN_edge_sum":
         model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[args.hid_dim]*args.num_layers, output_norm=args.norm,
                                            gru_out_layer= args.gru_out_layer, update_func=args.update_func,dropout=args.dropout)
@@ -152,14 +161,24 @@ def main():
 
         all_infer_result = pd.DataFrame()
         '''save folder'''
-        metric_file_savepath = 'output/SMRT_result_metrics_22_8_22'
+        metric_file_savepath = 'output/SMRT_result_metrics'
         if not os.path.isdir(metric_file_savepath):
             os.makedirs(metric_file_savepath)
-        print(metric_file_savepath)
+        # print(metric_file_savepath)
 
         '''load best model params'''
         # best_model_path = "/data/users/kangqiyue/kqy/DEEPGNN_RT/output/GNN_DEEPGNN_mlp1_layer_16_lr_0.001_seed_1/best_model_weight.pth"
-        best_model_path = os.path.join(file_savepath, "best_model_weight.pth")
+        if args.best_ckpt not in ["no"]:
+            best_model_path = args.best_ckpt
+            metric_file_savepath = "output/best_ckpt"
+            if not os.path.isdir(metric_file_savepath):
+                os.makedirs(metric_file_savepath)
+        else:
+            best_model_path = os.path.join(file_savepath, "best_model_weight.pth")
+
+        print(f"best ckpt: {best_model_path}")
+        print(f"metric save path: {metric_file_savepath}")
+
         checkpoint = torch.load(best_model_path, map_location=device)  # 加载断点
         model.load_state_dict(checkpoint)  # 加载模型可学习参数
         print(f"model loaded from: {best_model_path}")
@@ -301,6 +320,7 @@ if __name__ == '__main__':
 
     # GNN model args
     parser.add_argument('--num_layers', type=int, default=16, help='Number of GNN layers.')
+    parser.add_argument('--hid_dim', type=int, default=200, help='hidden dim.')
     parser.add_argument('--gru_out_layer', type=int, default=2, help='readout layer')
     parser.add_argument('--norm', type=str, default='none', help='choose from: batch_norm, layer_norm, none')
     parser.add_argument('--update_func', type=str, default='no_relu', help='choose from: batch_norm, layer_norm, none')
@@ -315,6 +335,7 @@ if __name__ == '__main__':
 
     #inference or not
     parser.add_argument("--inference", action="store_true", help="Whether inference")
+    parser.add_argument("--best_ckpt", type=str, help="best_model_ckpt")
 
     args = parser.parse_args()
     print(args)
