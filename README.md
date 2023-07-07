@@ -2,14 +2,28 @@
 
 This repository correspond to the article: **Deep Graph Convolutional Network for Small-Molecule Retention Time Prediction** by Qiyue Kang et al. (the paper is in submission).
 
+## Model performance
+
+The model performances were evaluated through metrics including mean absolute error (MAE), median absolute error (MedAE), mean absolute percentage error (MAPE), mean square error (MSE), and R2. 
+
+
+### Model performance
+
+
+|            | Depth | MAE    |       | MedAE  |       | MAPE   |        | R2     |        | MSE   |     |
+|------------|:-----:|--------|-------|--------|-------|--------|--------|--------|--------|-------|-----|
+|            |       |  Mean  |  Std  |  Mean  |  Std  |  Mean  |   Std  |  Mean  |   Std  |  Mean | Std |
+| DeepGCN-RT | 3     | 27.97  | 0.20  | 14.01  | 0.07  | 0.035  | 0.000  | 0.892  | 0.002  | 3303  | 55  |
+| DeepGCN-RT | 5     | 27.00  | 0.19  | 12.91  | 0.18  | 0.034  | 0.000  | 0.892  | 0.001  | 3288  | 33  |
+| DeepGCN-RT | 8     | 26.61  | 0.09  | 12.44  | 0.05  | 0.034  | 0.000  | 0.892  | 0.001  | 3286  | 31  |
+| DeepGCN-RT | 16    | 26.55  | 0.17  | 12.38  | 0.12  | 0.033  | 0.000  | 0.892  | 0.001  | 3299  | 45  |
 
 
 ## Note 
 
-This repository contians GNN models for rentention time prediction, including DeepGCN-RT, and GCN models (GAT and GIN were also implemented). The ```models.py dataset.py and train.py``` contain the model, dataset, and train codes, respectively. 
-In addition, the ```transfer_learning.py``` contains the transfer learning code(10 fold cross validation). The results of transfer learning for all models are contained in folder named ```result```.
+This repository contians GNN models for rentention time prediction, including DeepGCN-RT, and plain GCN model. The ```models.py dataset.py and train.py``` contain source code. The model weights are included in the ```model_path``` folder. The ```transfer_learning.py``` contains the transfer learning code(10 fold cross validation). The full results of transfer learning for all models are contained in folder named ```result```.
 
-## Environment
+## Build conda environment
 The environment dependencies for Linux system are contained in the file named ```environment.yaml```. Use ```conda update``` to build the environment.
 
 
@@ -39,6 +53,8 @@ To run the transfer learning on nine transfer learning data sets, use:
 sh scripts/transfer_learning.sh
 ```
 
+
+## Model inference using the DeepGCN-RT model.
 To run the inference code, the following command could be used:
 ```
 python inference.py \
