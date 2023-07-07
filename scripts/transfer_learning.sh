@@ -4,7 +4,7 @@ set -ex
 export CUBLAS_WORKSPACE_CONFIG=:16:8
 
 
-best_model_file="/zhangshuai/work/DEEPGNN_RT/output/deep_gnn_22_8_3/GCN_edge_attention_GRU/GCN_edge_attention_GRU_none_16_lr_0.001_seed_3/best_model_weight.pth"
+best_model_file="model_path/est_model_weight.pth"
 
 for d in 'Cao_HILIC_116' \
          'Eawag_XBridgeC18_364' \

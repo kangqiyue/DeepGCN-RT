@@ -10,8 +10,6 @@ def main():
                                        dropout=0.1)
 
     '''load best model params'''
-    # best_model_path = "/data/users/kangqiyue/kqy/DEEPGNN_RT/output/GNN_DEEPGNN_mlp1_layer_16_lr_0.001_seed_1/best_model_weight.pth"
-    # best_model_path = "D:\DEEPGNN_RT\output\DeepGNN-RT\GNN_DEEPGNN_layer_16_lr_0.001_seed_1\\best_model_weight.pth"
     best_model_path = args.model_path
     checkpoint = torch.load(best_model_path, map_location=device)  # 加载断点
     model.load_state_dict(checkpoint)  # 加载模型可学习参数

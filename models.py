@@ -36,45 +36,112 @@ class EmbeddingLayerConcat(nn.Module):
             return  node_feats, edge_feats
 
 
+'''normal GCN, no edge, average pooling'''
+class GCNModel(nn.Module):
+    def __init__(self, node_in_dim, hidden_feats=None, gnn_norm="both", activation=F.relu,
+                 residual=False, output_norm="batch_norm", dropout=0.1, gru_out_layer=2):
+        super(GCNModel, self).__init__()
+        if hidden_feats is None:
+            hidden_feats = [200]*5
+
+        in_feats = hidden_feats[0]
+        n_layers = len(hidden_feats)
+
+        gnn_norm = [gnn_norm for _ in range(n_layers)]
+        activation = [activation for _ in range(n_layers)]
+        residual = [residual for _ in range(n_layers)]
+        output_norm = [output_norm for _ in range(n_layers)]
+        dropout = [dropout for _ in range(n_layers)]
+
+        lengths = [len(hidden_feats), len(gnn_norm), len(activation),
+                   len(residual), len(output_norm), len(dropout)]
+        assert len(set(lengths)) == 1, 'Expect the lengths of hidden_feats, gnn_norm, ' \
+                                       'activation, residual, batchnorm and dropout to ' \
+                                       'be the same, got {}'.format(lengths)
+
+        self.embed_layer = EmbeddingLayerConcat(node_in_dim, hidden_feats[0])
+        self.hidden_feats = hidden_feats
+        self.gnn_layers = nn.ModuleList()
+        for i in range(n_layers):
+            self.gnn_layers.append(GCNLayer(in_feats, hidden_feats[i], gnn_norm[i], activation[i],
+                                            residual[i], output_norm[i], dropout[i]))
+            in_feats = hidden_feats[i]
+        self.readout = dgl.nn.AvgPooling()
+        # mlp layers
+        self.out = nn.Sequential(
+            nn.Linear(hidden_feats[-1], 1024),
+            nn.ReLU(),
+            nn.Linear(1024, 1)
+        )
+
+    def reset_parameters(self):
+        """Reinitialize model parameters."""
+        for gnn in self.gnn_layers:
+            gnn.reset_parameters()
+
+    def forward(self, g):
+        feats = self.embed_layer(g)
+        for gnn in self.gnn_layers:
+            feats = gnn(g, feats)
+        # g.ndata['feats'] = feats
+        # feats = dgl.sum_nodes(g, "feats")
+        # feats = self.out(feats)
+        out = self.readout(g, feats)
+        out = self.out(out)
+        return out
+
+
+'''GCN, with edge, average pooling'''
+class GCNModelWithEdge(nn.Module):
+    def __init__(self, node_in_dim, edge_in_dim, hidden_feats=None, activation=F.relu,
+                 residual=False, output_norm="none", dropout=0.1, update_func="no_relu"):
+        super(GCNModelWithEdge, self).__init__()
+        # self.readout_layer_norm = readout_layer_norm
+        if hidden_feats is None:
+            hidden_feats = [200]*5
+        in_feats = hidden_feats[0]
+        n_layers = len(hidden_feats)
+        activation = [activation for _ in range(n_layers)]
+        residual = [residual for _ in range(n_layers)]
+        output_norm = [output_norm for _ in range(n_layers)]
+        dropout = [dropout for _ in range(n_layers)]
+
+        lengths = [len(hidden_feats), len(activation),
+                   len(residual), len(output_norm), len(dropout)]
+        assert len(set(lengths)) == 1, 'Expect the lengths of hidden_feats, gnn_norm, ' \
+                                       'activation, residual, batchnorm and dropout to ' \
+                                       'be the same, got {}'.format(lengths)
+        self.embed_layer = EmbeddingLayerConcat(node_in_dim, hidden_feats[0], edge_in_dim, hidden_feats[0])
+        self.hidden_feats = hidden_feats
+        self.gnn_layers = nn.ModuleList()
+        for i in range(n_layers):
+            self.gnn_layers.append(GCNLayerWithEdge(in_feats, hidden_feats[i], activation[i], residual[i], output_norm[i], dropout[i], update_func))
+            in_feats = hidden_feats[i]
+        self.readout = dgl.nn.AvgPooling()
+        # mlp layers
+        self.out = nn.Sequential(
+            nn.Linear(hidden_feats[-1], 1024),
+            nn.ReLU(),
+            nn.Linear(1024, 1)
+        )
+
+    def reset_parameters(self):
+        """Reinitialize model parameters."""
+        for gnn in self.gnn_layers:
+            gnn.reset_parameters()
+
+    def forward(self, g):
+        node_feat, edge_feat = self.embed_layer(g)
+        for gnn in self.gnn_layers:
+            node_feat = gnn(g, node_feat, edge_feat)
+        out = self.readout(g, node_feat)
+        out = self.out(out)
+        return out
+
+
 '''GCN model without edge, with attention and GRU readout'''
 # Code was adapted and modified from DGL-LifeSci, url: https://lifesci.dgl.ai/api/model.gnn.html
 class GCNModelAFPreadout(nn.Module):
-    r"""GCN from `Semi-Supervised Classification with Graph Convolutional Networks
-    <https://arxiv.org/abs/1609.02907>`__
-
-    Parameters
-    ----------
-    in_feats : int
-        Number of input node features.
-    hidden_feats : list of int
-        ``hidden_feats[i]`` gives the size of node representations after the i-th GCN layer.
-        ``len(hidden_feats)`` equals the number of GCN layers.  By default, we use
-        ``[64, 64]``.
-    gnn_norm : list of str
-        ``gnn_norm[i]`` gives the message passing normalizer for the i-th GCN layer, which
-        can be `'right'`, `'both'` or `'none'`. The `'right'` normalizer divides the aggregated
-        messages by each node's in-degree. The `'both'` normalizer corresponds to the symmetric
-        adjacency normalization in the original GCN paper. The `'none'` normalizer simply sums
-        the messages. ``len(gnn_norm)`` equals the number of GCN layers. By default, we use
-        ``['none', 'none']``.
-    activation : list of activation functions or None
-        If not None, ``activation[i]`` gives the activation function to be used for
-        the i-th GCN layer. ``len(activation)`` equals the number of GCN layers.
-        By default, ReLU is applied for all GCN layers.
-    residual : list of bool
-        ``residual[i]`` decides if residual connection is to be used for the i-th GCN layer.
-        ``len(residual)`` equals the number of GCN layers. By default, residual connection
-        is performed for each GCN layer.
-    batchnorm : list of bool
-        ``batchnorm[i]`` decides if batch normalization is to be applied on the output of
-        the i-th GCN layer. ``len(batchnorm)`` equals the number of GCN layers. By default,
-        batch normalization is applied for all GCN layers.
-    dropout : list of float
-        ``dropout[i]`` decides the dropout probability on the output of the i-th GCN layer.
-        ``len(dropout)`` equals the number of GCN layers. By default, no dropout is
-        performed for all layers.
-    """
-
     def __init__(self, node_in_dim, hidden_feats=None, gnn_norm="both", activation=F.relu,
                  residual=True, output_norm="batch_norm", dropout=0.1, gru_out_layer=2):
         super(GCNModelAFPreadout, self).__init__()
@@ -135,42 +202,6 @@ class GCNModelAFPreadout(nn.Module):
 
 '''GCN model with edge, attention and GRU readout'''
 class GCNModelWithEdgeAFPreadout(nn.Module):
-    r"""GCN from `Semi-Supervised Classification with Graph Convolutional Networks
-    <https://arxiv.org/abs/1609.02907>`__
-
-    Parameters
-    ----------
-    in_feats : int
-        Number of input node features.
-    hidden_feats : list of int
-        ``hidden_feats[i]`` gives the size of node representations after the i-th GCN layer.
-        ``len(hidden_feats)`` equals the number of GCN layers.  By default, we use
-        ``[64, 64]``.
-    gnn_norm : list of str
-        ``gnn_norm[i]`` gives the message passing normalizer for the i-th GCN layer, which
-        can be `'right'`, `'both'` or `'none'`. The `'right'` normalizer divides the aggregated
-        messages by each node's in-degree. The `'both'` normalizer corresponds to the symmetric
-        adjacency normalization in the original GCN paper. The `'none'` normalizer simply sums
-        the messages. ``len(gnn_norm)`` equals the number of GCN layers. By default, we use
-        ``['none', 'none']``.
-    activation : list of activation functions or None
-        If not None, ``activation[i]`` gives the activation function to be used for
-        the i-th GCN layer. ``len(activation)`` equals the number of GCN layers.
-        By default, ReLU is applied for all GCN layers.
-    residual : list of bool
-        ``residual[i]`` decides if residual connection is to be used for the i-th GCN layer.
-        ``len(residual)`` equals the number of GCN layers. By default, residual connection
-        is performed for each GCN layer.
-    batchnorm : list of bool
-        ``batchnorm[i]`` decides if batch normalization is to be applied on the output of
-        the i-th GCN layer. ``len(batchnorm)`` equals the number of GCN layers. By default,
-        batch normalization is applied for all GCN layers.
-    dropout : list of float
-        ``dropout[i]`` decides the dropout probability on the output of the i-th GCN layer.
-        ``len(dropout)`` equals the number of GCN layers. By default, no dropout is
-        performed for all layers.
-    """
-
     def __init__(self, node_in_dim, edge_in_dim, hidden_feats=None, activation=F.relu,
                  residual=True, output_norm="none", dropout=0.1, gru_out_layer=2, update_func="no_relu"):
         super(GCNModelWithEdgeAFPreadout, self).__init__()
