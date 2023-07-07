@@ -18,7 +18,7 @@ To run the training code, the following command could be used:
 
 ```
 python train.py \
---model_name "GCN_edge_attention_GRU" \
+--model_name "DeepGCN-RT" \
 --dataset "SMRT"
 --num_layers 16 \
 --hid_dim 200 \
@@ -28,9 +28,7 @@ python train.py \
 --early_stop 30 \
 --seed 1 
 ```
-In addition, the train and transfer learning processes could also be started by the bash scripts, see the folder named ```scripts```.
-
-To run the training process on SMRT data set:
+Alternatively, the train and transfer learning processes could also be started by the **shell** scripts using for loop. To run the training process on SMRT data set, using the following command:
 ```
 sh scripts/train.sh
 ```
@@ -38,7 +36,7 @@ sh scripts/train.sh
 
 To run the transfer learning on nine transfer learning data sets, use:
 ```
-scripts/transfer_learning.sh
+sh scripts/transfer_learning.sh
 ```
 
 To run the inference code, the following command could be used:
