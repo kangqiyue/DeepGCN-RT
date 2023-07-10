@@ -1,4 +1,4 @@
-# DeepGNN-RT
+# DeepGCN-RT
 
 This repository correspond to the article: **Deep Graph Convolutional Network for Small-Molecule Retention Time Prediction** by Qiyue Kang et al. (the paper is in submission).
 
