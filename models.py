@@ -424,7 +424,7 @@ class GATModel(nn.Module):
                 in_feats = hidden_feats[i]
 
         self.readout = AttentiveFPReadout(
-            hidden_feats[-1], num_timesteps=gru_out_layer, dropout=feat_drops
+            hidden_feats[-1], num_timesteps=gru_out_layer, dropout=feat_drops[-1]
         )
         # mlp layers
         self.out = nn.Sequential(
