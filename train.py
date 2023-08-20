@@ -152,6 +152,17 @@ def main():
         from models import  GINModel
         model = GINModel(num_node_emb=get_node_dim(),num_edge_emb=get_edge_dim(), num_layers=args.num_layers, emb_dim=args.hid_dim,
                          dropout=args.dropout, gru_out_layer=args.gru_out_layer)
+    elif model_name == "GAT_average":
+        from models import GATModel
+        model = GATModel(node_in_dim=get_node_dim(), hidden_feats=[args.hid_dim] * args.num_layers, num_heads=None, feat_drops=None,
+                 attn_drops=None, alphas=None, residuals=None, agg_modes=None, activations=None,
+                 biases=None, gru_out_layer=args.gru_out_layer)
+        model.readout = AvgPooling()
+    elif model_name == "GIN_average":
+        from models import  GINModel
+        model = GINModel(num_node_emb=get_node_dim(),num_edge_emb=get_edge_dim(), num_layers=args.num_layers, emb_dim=args.hid_dim,
+                         dropout=args.dropout, gru_out_layer=args.gru_out_layer)
+        model.readout = AvgPooling()
 
     elif model_name == "GCN_attention_GRU": # without edge info, but has residual and attention readout
         model = GCNModelAFPreadout(node_in_dim=get_node_dim(), hidden_feats=[args.hid_dim]*args.num_layers, output_norm=args.norm, gru_out_layer=args.gru_out_layer, dropout=args.dropout)
