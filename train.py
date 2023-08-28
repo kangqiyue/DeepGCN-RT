@@ -99,7 +99,7 @@ def main():
             key, val = line.strip().split("=", 1)
             os.environ[key] = val
     wandb.init(project="deepGNN_proj")
-    args.name = f"{args.model_name}_{args.norm}_{args.num_layers}_lr_{args.lr}_seed_{args.seed}"
+    args.name = f"{args.model_name}_norm_{args.norm}_layer_{args.num_layers}_k_{args.gru_out_layer}_lr_{args.lr}_dropout_{args.dropout}_seed_{args.seed}"
     wandb.run.name = args.name
     wandb.config.update(args)  # adds all of the arguments as config variables
     print(args)
@@ -135,12 +135,34 @@ def main():
         model = GCNModelWithEdge(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[args.hid_dim]*args.num_layers, output_norm=args.norm,
                                            update_func=args.update_func, dropout=args.dropout, residual=False)
     elif model_name == "GCN_edge_residual": #GCN with edge, with residual
+        from models import GCNModelWithEdge
         model = GCNModelWithEdge(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[args.hid_dim] * args.num_layers, output_norm=args.norm,
                                  update_func=args.update_func, dropout=args.dropout, residual=True)
     elif model_name == "DeepGCN-RT": # GCN with edge, with residual, attention readout
         # Note: this is the DeepGCN-RT model, GCN_edge_attention_GRU
         model = GCNModelWithEdgeAFPreadout(node_in_dim=get_node_dim(), edge_in_dim=get_edge_dim(), hidden_feats=[args.hid_dim]*args.num_layers, output_norm=args.norm,
                                            gru_out_layer= args.gru_out_layer, update_func=args.update_func, dropout=args.dropout, residual=True)
+
+    elif model_name == "GAT":
+        from models import GATModel
+        model = GATModel(node_in_dim=get_node_dim(), hidden_feats=[args.hid_dim] * args.num_layers, num_heads=None, feat_drops=None,
+                 attn_drops=None, alphas=None, residuals=None, agg_modes=None, activations=None,
+                 biases=None, gru_out_layer=args.gru_out_layer)
+    elif model_name == "GIN":
+        from models import  GINModel
+        model = GINModel(num_node_emb=get_node_dim(),num_edge_emb=get_edge_dim(), num_layers=args.num_layers, emb_dim=args.hid_dim,
+                         dropout=args.dropout, gru_out_layer=args.gru_out_layer)
+    elif model_name == "GAT_average":
+        from models import GATModel
+        model = GATModel(node_in_dim=get_node_dim(), hidden_feats=[args.hid_dim] * args.num_layers, num_heads=None, feat_drops=None,
+                 attn_drops=None, alphas=None, residuals=None, agg_modes=None, activations=None,
+                 biases=None, gru_out_layer=args.gru_out_layer)
+        model.readout = AvgPooling()
+    elif model_name == "GIN_average":
+        from models import  GINModel
+        model = GINModel(num_node_emb=get_node_dim(),num_edge_emb=get_edge_dim(), num_layers=args.num_layers, emb_dim=args.hid_dim,
+                         dropout=args.dropout, gru_out_layer=args.gru_out_layer)
+        model.readout = AvgPooling()
 
     elif model_name == "GCN_attention_GRU": # without edge info, but has residual and attention readout
         model = GCNModelAFPreadout(node_in_dim=get_node_dim(), hidden_feats=[args.hid_dim]*args.num_layers, output_norm=args.norm, gru_out_layer=args.gru_out_layer, dropout=args.dropout)

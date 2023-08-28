@@ -376,7 +376,7 @@ class GATModel(nn.Module):
     """
     def __init__(self, node_in_dim, hidden_feats=None, num_heads=None, feat_drops=None,
                  attn_drops=None, alphas=None, residuals=None, agg_modes=None, activations=None,
-                 biases=None):
+                 biases=None, gru_out_layer=2):
         super(GATModel, self).__init__()
         if hidden_feats is None:
             hidden_feats = [200, 200, 200,200,200]
@@ -423,6 +423,10 @@ class GATModel(nn.Module):
             else:
                 in_feats = hidden_feats[i]
 
+        self.readout = AttentiveFPReadout(
+            hidden_feats[-1], num_timesteps=gru_out_layer, dropout=feat_drops[-1]
+        )
+        # mlp layers
         self.out = nn.Sequential(
             nn.Linear(hidden_feats[-1], 1024),
             nn.ReLU(),
@@ -456,11 +460,9 @@ class GATModel(nn.Module):
         feats = self.embed_layer(g)
         for gnn in self.gnn_layers:
             feats = gnn(g, feats)
+        feats = self.readout(g, feats)
         # add mlp layers
-        g.ndata['feats'] = feats
-        feats = dgl.sum_nodes(g, "feats")
         feats = self.out(feats)
-
         return feats
 
 
@@ -503,7 +505,7 @@ class GINModel(nn.Module):
         Dropout to apply to the output of each GIN layer. Default to 0
     """
     def __init__(self, num_node_emb, num_edge_emb,
-                 num_layers=5, emb_dim=200, JK='last', dropout=0.1):
+                 num_layers=5, emb_dim=200, JK='last', dropout=0.1,gru_out_layer=2):
         super(GINModel, self).__init__()
 
         self.num_layers = num_layers
@@ -523,6 +525,9 @@ class GINModel(nn.Module):
             else:
                 self.gnn_layers.append(GINLayerModified(num_edge_emb, emb_dim, activation=F.relu))
 
+        self.readout = AttentiveFPReadout(
+            emb_dim, num_timesteps=gru_out_layer, dropout=dropout
+        )
         self.out = nn.Sequential(
             nn.Linear(emb_dim, 1024),
             nn.ReLU(),
@@ -585,8 +590,7 @@ class GINModel(nn.Module):
             return ValueError("Expect self.JK to be 'concat', 'last', "
                               "'max' or 'sum', got {}".format(self.JK))
 
-        g.ndata['feats'] = final_node_feats
-        feats = dgl.sum_nodes(g, "feats")
+        feats = self.readout(g, final_node_feats)
         feats = self.out(feats)
         return feats
 
