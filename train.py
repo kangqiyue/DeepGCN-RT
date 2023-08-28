@@ -39,6 +39,7 @@ def seed_torch(seed=1):
     dgl.random.seed(seed)
 
 
+#train loop
 def train(model, device, dataloader, optimizer, loss_fn, loss_fn_MAE,):
     num_batches = len(dataloader)
     train_loss = 0
@@ -63,6 +64,7 @@ def train(model, device, dataloader, optimizer, loss_fn, loss_fn_MAE,):
     return train_loss / num_batches
 
 
+#test loop
 def test(model,device, dataloader, loss_fn, loss_fn_MAE, return_pred=False):
     num_batches = len(dataloader)
     test_loss = 0
@@ -164,6 +166,7 @@ def main():
                          dropout=args.dropout, gru_out_layer=args.gru_out_layer)
         model.readout = AvgPooling()
 
+    # ablation models
     elif model_name == "GCN_attention_GRU": # without edge info, but has residual and attention readout
         model = GCNModelAFPreadout(node_in_dim=get_node_dim(), hidden_feats=[args.hid_dim]*args.num_layers, output_norm=args.norm, gru_out_layer=args.gru_out_layer, dropout=args.dropout)
 
@@ -319,7 +322,7 @@ def main():
             "best_test_MAE": best_test_MAE
         })
 
-    #result
+    # save results
     result = pd.DataFrame(log_file)
     result.columns = ["epoch", "lr", "train_loss", "valid_loss", "test_loss", "valid_MAE", "test_MAE"]
     result.to_csv(file_savepath + "/log_file.csv")
@@ -332,7 +335,7 @@ def main():
 
 if __name__ == '__main__':
     """
-    Model Parameters
+    Model and training parameters
     """
     parser = argparse.ArgumentParser(description='GNN_RT_MODEL')
     #wandb name, dataset name, model name
