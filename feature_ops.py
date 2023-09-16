@@ -50,14 +50,16 @@ def encode(x: Union[float, int, str]) -> List[float]:
         x = 0.0
     return [float(x)]
 
-def bond_featurizer(bond: Chem.Bond) -> np.ndarray:
+def bond_featurizer(bond: Chem.Bond,exclude_feature) -> np.ndarray:
+    new_bond_features = [i for i in bond_features if i != exclude_feature]
     return np.concatenate([
-        globals()[bond_feature](bond) for bond_feature in bond_features
+        globals()[bond_feature](bond) for bond_feature in new_bond_features
     ], axis=0)
 
-def atom_featurizer(atom: Chem.Atom) -> np.ndarray:
+def atom_featurizer(atom: Chem.Atom, exclude_feature) -> np.ndarray:
+    new_atom_features = [i for i in atom_features if i != exclude_feature]
     return np.concatenate([
-        globals()[atom_feature](atom) for atom_feature in atom_features
+        globals()[atom_feature](atom) for atom_feature in new_atom_features
     ], axis=0)
 
 def bondtype(bond: Chem.Bond) -> List[float]:
