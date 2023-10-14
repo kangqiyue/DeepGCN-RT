@@ -1,6 +1,7 @@
 # DeepGCN-RT
 
-This repository correspond to the article: 
+## News
+We have released the training code and the trained model weights. If you find them helpful, please cite our article!
 
 **Kang, Q.**; **Fang, P.**; Zhang, S.; Qiu, H.; **Lan, Z**. Deep Graph Convolutional Network for Small-Molecule Retention Time Prediction. Journal of Chromatography A. 2023, 464439, ISSN 0021-9673.
 
