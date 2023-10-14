@@ -58,7 +58,7 @@ def get_edge_features(mol, exclude_feature=None):
 
 """adopted and modified from ogb;
 url: https://github.com/snap-stanford/ogb/blob/c8f0d2aca80a4f885bfd6ad5258ecf1c2d0ac2d9/ogb/utils/mol.py#L6"""
-def smiles2graph(smiles_string,  exclude_node, exclude_edge):
+def smiles2graph(smiles_string,  exclude_node=None, exclude_edge=None):
     """
     Converts SMILES string to graph Data object
     :input: SMILES string (str)
@@ -308,6 +308,7 @@ if __name__ == "__main__":
     test = TLDataset(name= "Training_HILIC", raw_dir="D:\DEEPGNN_RT\dataset\RIKEN_HILIC")
     test = TLDataset(name= "Test_HILIC", raw_dir="D:\DEEPGNN_RT\dataset\RIKEN_HILIC")
     test = TLDataset(name= "Test_HILIC", raw_dir="D:\DEEPGNN_RT\dataset\RIKEN_HILIC")
+
 
 
     tl_list = [  'Cao_HILIC_116',
