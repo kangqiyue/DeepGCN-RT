@@ -7,7 +7,7 @@ from typing import Union, List
 import torch
 import dgl
 from dgl.data import DGLDataset
-from dgl.data.utils import save_graphs,load_graphs
+from dgl.data.utils import get_download_dir, load_graphs, save_graphs
 
 from rdkit import Chem
 from rdkit.Chem import AllChem
@@ -64,7 +64,13 @@ def smiles2graph(smiles_string,  exclude_node=None, exclude_edge=None):
     :input: SMILES string (str)
     :return: graph object
     """
+    if not isinstance(smiles_string, str) or not smiles_string.strip():
+        raise ValueError("SMILES must be a non-empty string.")
+
+    smiles_string = smiles_string.strip()
     mol = Chem.MolFromSmiles(smiles_string)
+    if mol is None:
+        raise ValueError(f"Invalid SMILES: {smiles_string!r}")
 
     # atoms
     x = get_node_features(mol, exclude_node)
@@ -326,7 +332,6 @@ if __name__ == "__main__":
         print(len(test_tl))
 
     print("transfer to graph finished!")
-
 
 
 
