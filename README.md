@@ -5,9 +5,23 @@
 [![DOI](https://img.shields.io/badge/DOI-10.1016%2Fj.chroma.2023.464439-blue.svg)](https://doi.org/10.1016/j.chroma.2023.464439)
 
 DeepGCN-RT is a graph neural network for predicting small-molecule retention
-time. This repository accompanies the 2023 *Journal of Chromatography A*
-article and provides the released source code, pretrained weights, datasets,
-and transfer-learning results.
+time. This repository accompanies the *Journal of Chromatography A* article
+and provides the released source code, pretrained weights, datasets, and
+transfer-learning results.
+
+## Maintenance status
+
+This repository contains the code and artifacts associated with the research
+publication. Current maintenance focuses on making the published model easier
+to run and verify:
+
+- a portable CPU/CUDA inference command with clear input validation;
+- automated checks for molecular graph construction and checkpoint integrity;
+- a real pretrained CPU inference smoke test in continuous integration; and
+- updated installation, citation, and contribution guidance.
+
+The training and transfer-learning scripts remain available for research
+provenance, but they are not currently part of the maintained inference path.
 
 > Kang, Q.; Fang, P.; Zhang, S.; Qiu, H.; Lan, Z. Deep graph convolutional
 > network for small-molecule retention time prediction. *Journal of
