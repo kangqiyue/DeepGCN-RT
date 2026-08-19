@@ -1,71 +1,113 @@
 # DeepGCN-RT
 
-## News
-We have released the training code and all trained model weights. If you find them helpful, please cite our article!
+[![Inference CI](https://github.com/kangqiyue/DeepGCN-RT/actions/workflows/inference-ci.yml/badge.svg)](https://github.com/kangqiyue/DeepGCN-RT/actions/workflows/inference-ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE.md)
+[![DOI](https://img.shields.io/badge/DOI-10.1016%2Fj.chroma.2023.464439-blue.svg)](https://doi.org/10.1016/j.chroma.2023.464439)
 
-**Kang, Q.**; **Fang, P.**; Zhang, S.; Qiu, H.; **Lan, Z**. Deep Graph Convolutional Network for Small-Molecule Retention Time Prediction. Journal of Chromatography A. 2023, 464439, ISSN 0021-9673.
+DeepGCN-RT is a graph neural network for predicting small-molecule retention
+time. This repository accompanies the 2023 *Journal of Chromatography A*
+article and provides the released source code, pretrained weights, datasets,
+and transfer-learning results.
 
-Article url: https://authors.elsevier.com/a/1hy7U4-ggV0Qt
-(https://doi.org/10.1016/j.chroma.2023.464439.)
+> Kang, Q.; Fang, P.; Zhang, S.; Qiu, H.; Lan, Z. Deep graph convolutional
+> network for small-molecule retention time prediction. *Journal of
+> Chromatography A* **1711** (2023), 464439.
+> [https://doi.org/10.1016/j.chroma.2023.464439](https://doi.org/10.1016/j.chroma.2023.464439)
 
+## Repository contents
 
-## Model performance
+- `inference.py`: supported command-line entry point for the released model.
+- `model_path/best_model_weight.pth`: released 16-layer DeepGCN-RT checkpoint.
+- `dataset.py` and `feature_ops.py`: molecular graph construction and features.
+- `dataset/`: SMRT and transfer-learning datasets used by the project.
+- `result/`: published transfer-learning result summaries.
+- `train.py` and `transfer_learning.py`: original research training workflows.
 
-The model performances were evaluated through metrics including mean absolute error (MAE), median absolute error (MedAE), mean absolute percentage error (MAPE), mean square error (MSE), and R2. 
+## Quick start: pretrained inference
 
+Python 3.9 or 3.10 is recommended. Create an isolated environment and install
+the inference dependencies:
 
-### Model performance
-
-
-|            | Depth | MAE    |       | MedAE  |       | MAPE   |        | R2     |        | MSE   |     |
-|------------|:-----:|--------|-------|--------|-------|--------|--------|--------|--------|-------|-----|
-|            |       |  Mean  |  Std  |  Mean  |  Std  |  Mean  |   Std  |  Mean  |   Std  |  Mean | Std |
-| DeepGCN-RT | 3     | 27.97  | 0.20  | 14.01  | 0.07  | 0.035  | 0.000  | 0.892  | 0.002  | 3303  | 55  |
-| DeepGCN-RT | 5     | 27.00  | 0.19  | 12.91  | 0.18  | 0.034  | 0.000  | 0.892  | 0.001  | 3288  | 33  |
-| DeepGCN-RT | 8     | 26.61  | 0.09  | 12.44  | 0.05  | 0.034  | 0.000  | 0.892  | 0.001  | 3286  | 31  |
-| DeepGCN-RT | 16    | 26.55  | 0.17  | 12.38  | 0.12  | 0.033  | 0.000  | 0.892  | 0.001  | 3299  | 45  |
-
-
-## Note 
-
-This repository contians GNN models for rentention time prediction, including DeepGCN-RT, and plain GCN model. The ```models.py dataset.py and train.py``` contain source code. The model weights are included in the ```model_path``` folder. The ```transfer_learning.py``` contains the transfer learning code(10 fold cross validation). The full results of transfer learning for all models are contained in folder named ```result```.
-
-## Build conda environment
-The environment dependencies for Linux system are contained in the file named ```environment.yaml```. Use ```conda update``` to build the environment.
-
-
-## Run the code
-To run the training code, the following command could be used:
-
-```
-python train.py \
---model_name "DeepGCN-RT" \
---dataset "SMRT"
---num_layers 16 \
---hid_dim 200 \
---epochs 200 \
---lr 0.001 \
---batch_size 64\
---early_stop 30 \
---seed 1 
-```
-Alternatively, the train and transfer learning processes could also be started by the **shell** scripts using for loop. To run the training process on SMRT data set, using the following command:
-```
-sh scripts/train.sh
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements-inference.txt
 ```
 
+Predict the retention time for ethanol on CPU:
 
-To run the transfer learning on nine transfer learning data sets, use:
-```
-sh scripts/transfer_learning.sh
-```
-
-
-## Model inference using the DeepGCN-RT model.
-To run the inference code, the following command could be used:
-```
-python inference.py \
---SMILES "demo_SMILES"\
---model_path "model path"
+```bash
+python inference.py --smiles "CCO" --device cpu
 ```
 
+Expected output with the released checkpoint:
+
+```text
+SMILES: CCO
+Predicted retention time: 624.8956 s
+```
+
+`--SMILES` and `--model_path` remain accepted for compatibility with the
+original command line. Run `python inference.py --help` for all options.
+
+Retention time depends on the chromatographic system. The value returned here
+is a model estimate in the domain represented by the training data, not a
+universal retention time or an experimental measurement.
+
+## Released checkpoint integrity
+
+The bundled checkpoint is loaded in evaluation mode and is covered by a CPU
+inference smoke test. Its SHA-256 checksum is:
+
+```text
+195135fe104a5da90189130e6cceeeee1aeb115be21d195d597ced2a0d766677
+```
+
+The current automated checks cover SMILES validation, molecular graph
+construction, checkpoint integrity, and pretrained CPU inference. The original
+training and transfer-learning scripts are retained for research provenance but
+are not part of the inference CI workflow.
+
+## Published model performance
+
+The model was evaluated with mean absolute error (MAE), median absolute error
+(MedAE), mean absolute percentage error (MAPE), mean squared error (MSE), and
+R-squared. Values below reproduce the summary reported with the project.
+
+| Model | Depth | MAE | MedAE | MAPE | R2 | MSE |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| DeepGCN-RT | 3 | 27.97 | 14.01 | 0.035 | 0.892 | 3303 |
+| DeepGCN-RT | 5 | 27.00 | 12.91 | 0.034 | 0.892 | 3288 |
+| DeepGCN-RT | 8 | 26.61 | 12.44 | 0.034 | 0.892 | 3286 |
+| DeepGCN-RT | 16 | **26.55** | **12.38** | **0.033** | **0.892** | 3299 |
+
+For the full experimental setup, transfer-learning evaluation, and scientific
+interpretation, refer to the article.
+
+## Citation
+
+GitHub can generate citation metadata from [`CITATION.cff`](CITATION.cff). The
+corresponding BibTeX entry is:
+
+```bibtex
+@article{kang2023deepgcnrt,
+  title   = {Deep graph convolutional network for small-molecule retention time prediction},
+  author  = {Kang, Qiyue and Fang, Pengfei and Zhang, Shuai and Qiu, Huachuan and Lan, Zhenzhong},
+  journal = {Journal of Chromatography A},
+  volume  = {1711},
+  pages   = {464439},
+  year    = {2023},
+  doi     = {10.1016/j.chroma.2023.464439}
+}
+```
+
+## Contributing
+
+Bug reports and focused improvements are welcome. See
+[`CONTRIBUTING.md`](CONTRIBUTING.md) for the information needed to reproduce an
+inference problem and the local validation commands.
+
+## License
+
+DeepGCN-RT is distributed under the [Apache License 2.0](LICENSE.md).

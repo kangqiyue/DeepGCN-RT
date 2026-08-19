@@ -1,0 +1,36 @@
+cff-version: 1.2.0
+message: "If you use DeepGCN-RT in your research, please cite the associated article."
+title: "DeepGCN-RT"
+type: software
+authors:
+  - family-names: Kang
+    given-names: Qiyue
+  - family-names: Fang
+    given-names: Pengfei
+  - family-names: Zhang
+    given-names: Shuai
+  - family-names: Qiu
+    given-names: Huachuan
+  - family-names: Lan
+    given-names: Zhenzhong
+repository-code: "https://github.com/kangqiyue/DeepGCN-RT"
+license: Apache-2.0
+preferred-citation:
+  type: article
+  authors:
+    - family-names: Kang
+      given-names: Qiyue
+    - family-names: Fang
+      given-names: Pengfei
+    - family-names: Zhang
+      given-names: Shuai
+    - family-names: Qiu
+      given-names: Huachuan
+    - family-names: Lan
+      given-names: Zhenzhong
+  title: "Deep graph convolutional network for small-molecule retention time prediction"
+  journal: "Journal of Chromatography A"
+  volume: "1711"
+  year: 2023
+  doi: "10.1016/j.chroma.2023.464439"
+  start: "464439"

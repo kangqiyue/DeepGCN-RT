@@ -126,4 +126,3 @@ dependencies:
     - watchdog==2.1.7
     - xlrd==2.0.1
     - zipp==3.6.0
-prefix: /data/users/kangqiyue/.miniconda/envs/dgl
